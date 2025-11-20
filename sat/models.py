@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 
 # Create your models here.
 
@@ -122,7 +123,8 @@ class Estudiante(models.Model):
         models.SET_NULL, # Si el tutor se borra, el estudiante queda NULL (sin tutor)
         db_column='id_tutor_asignado', 
         blank=True, 
-        null=True
+        null=True,
+        limit_choices_to={'rol__nombre': 'Tutor'}  # Solo mostrar usuarios con rol "Tutor" en formularios
     )
     estado_actual = models.ForeignKey(
         'Estado', 
@@ -139,6 +141,13 @@ class Estudiante(models.Model):
 
     class Meta:
         db_table = 'estudiante'
+
+    def clean(self):
+        # Validación para asegurar que tutor_asignado (si existe) tenga rol "Tutor"
+        if self.tutor_asignado and getattr(self.tutor_asignado, 'rol', None):
+            rol_nombre = getattr(self.tutor_asignado.rol, 'nombre', None)
+            if rol_nombre != 'Tutor':
+                raise ValidationError({'tutor_asignado': 'El usuario asignado debe tener rol "Tutor".'})
 
     def __str__(self):
         return f"{self.nombre} {self.apellido}" 

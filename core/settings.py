@@ -29,7 +29,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'apps.home'  # Enable the inner home (home)
+    'apps.home',  # Enable the inner home (home)
+    'sat'   # Enable the SAT app
 ]
 
 MIDDLEWARE = [
@@ -71,8 +72,12 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'barriagada2_bd',             # Tu nombre de BD
+        'USER': 'barriagada',          # El usuario que usas en DBeaver
+        'PASSWORD': 'bastian2025',   # La contraseña que usas en DBeaver
+        'HOST': 'pgsqltrans.face.ubiobio.cl', # El host de la UBB
+        'PORT': '5432',                      # El puerto por defecto de Postgres
     }
 }
 

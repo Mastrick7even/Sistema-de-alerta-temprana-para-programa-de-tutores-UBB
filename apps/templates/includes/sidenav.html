@@ -18,6 +18,12 @@
             </a>
           </li>
           <li class="nav-item">
+            <a class="nav-link {% if 'estudiantes' in request.path %}active{% endif %}"
+              href="{% url 'estudiante-list' %}">
+              <i class="ni ni-hat-3 text-orange"></i> <span class="nav-link-text">Mis Estudiantes</span>
+            </a>
+          </li>
+          <li class="nav-item">
             <a class="nav-link {% if 'icons' in segment %} active {% endif %}" href="/icons.html">
               <i class="ni ni-planet text-orange"></i>
               <span class="nav-link-text">Icons</span>
@@ -59,7 +65,7 @@
               <i class="ni ni-user-run text-red"></i>
               <span class="nav-link-text">Logout</span>
             </a>
-          </li>            
+          </li>
         </ul>
         <!-- Divider -->
         <hr class="my-3">
@@ -71,27 +77,21 @@
         <ul class="navbar-nav mb-md-3">
 
           <li class="nav-item">
-            <a class="nav-link" 
-               target="_blank" 
-               href="https://appseed.us/admin-dashboards/django-dashboard-argon">
+            <a class="nav-link" target="_blank" href="https://appseed.us/admin-dashboards/django-dashboard-argon">
               <i class="ni ni-archive-2"></i>
               <span class="nav-link-text">Product Page</span>
             </a>
           </li>
 
           <li class="nav-item">
-            <a class="nav-link" 
-               target="_blank" 
-               href="https://appseed.us/admin-dashboards/django-dashboard-argon-pro">
+            <a class="nav-link" target="_blank" href="https://appseed.us/admin-dashboards/django-dashboard-argon-pro">
               <i class="ni ni-spaceship text-red"></i>
               <span class="nav-link-text text-red">PRO Version</span>
             </a>
           </li>
 
           <li class="nav-item">
-            <a class="nav-link active active-pro" 
-               target="_blank" 
-               href="http://appseed.us">
+            <a class="nav-link active active-pro" target="_blank" href="http://appseed.us">
               <i class="ni ni-send text-dark"></i>
               <span class="nav-link-text">AppSeed</span>
             </a>

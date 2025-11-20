@@ -1,0 +1,28 @@
+name: Integración continua Django # El nombre que aparecerá en la pestaña "Actions" de GitHub.
+
+on: # Triggers
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs: # Que hará
+  build:
+    runs-on: ubuntu-latest # Entorno que usará
+    strategy:
+      max-parallel: 4
+      matrix:
+        python-version: [3.9] # O la versión que uses
+
+    steps: # Check en donde se revisa el codigo
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }} # Instala python
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install Dependencies # Instala dependencias
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    

@@ -1,0 +1,152 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block title %}
+Perfil de {{ estudiante.nombre }}
+{% endblock title %}
+
+{% block content %}
+
+<style>
+    .header-perfil {
+        min-height: 300px;
+        background-image: url('{% static "assets/img/theme/profile-cover.jpg" %}');
+        background-size: cover;
+        background-position: center top;
+    }
+</style>
+
+<div class="header pb-6 d-flex align-items-center" class="header-perfil">
+    <span class="mask bg-gradient-default opacity-8"></span>
+
+    <div class="container-fluid d-flex align-items-center">
+        <div class="row">
+            <div class="col-lg-12 col-md-10">
+                <h1 class="display-2 text-white mt-4">{{ estudiante.nombre }} {{ estudiante.apellido }}</h1>
+                <p class="text-white mt-0 mb-4">Este es el perfil detallado del estudiante. Aquí puedes revisar su
+                    historial académico, sus alertas y registrar nuevas observaciones en la bitácora.</p>
+                <a href="{% url 'estudiante-list' %}" class="btn btn-neutral mb-3">Volver al listado</a>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="container-fluid mt--6">
+    <div class="row">
+
+        <div class="col-xl-4 order-xl-2">
+            <div class="card card-profile">
+                <div class="row justify-content-center">
+                    <div class="col-lg-3 order-lg-2">
+                        <div class="card-profile-image">
+                            <a href="#">
+                                <img src="{% static 'assets/img/theme/team-4.jpg' %}" class="rounded-circle">
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-header text-center border-0 pt-8 pt-md-4 pb-0 pb-md-4">
+                    <div class="d-flex justify-content-between">
+                        <a href="#" class="btn btn-sm btn-info mr-4">Email</a>
+                        <a href="#" class="btn btn-sm btn-default float-right">Mensaje</a>
+                    </div>
+                </div>
+
+                <div class="card-body pt-0">
+                    <div class="text-center mt-5">
+                        <h5 class="h3">
+                            {{ estudiante.nombre }} {{ estudiante.apellido }}
+                        </h5>
+                        <div class="h5 font-weight-300">
+                            <i class="ni location_pin mr-2"></i>{{ estudiante.carrera.nombre }}
+                        </div>
+                        <div class="h5 mt-4">
+                            <i class="ni business_briefcase-24 mr-2"></i>RUT: {{ estudiante.rut }}
+                        </div>
+                        <div>
+                            <i class="ni education_hat mr-2"></i>Ingreso: {{ estudiante.anio_ingreso }}
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <h3>Estado Actual</h3>
+                        <span class="badge badge-pill badge-lg 
+                {% if 'Alto' in estudiante.estado_actual.nombre %}badge-danger
+                {% elif 'Medio' in estudiante.estado_actual.nombre %}badge-warning
+                {% else %}badge-success{% endif %}">
+                            {{ estudiante.estado_actual.nombre }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="h3 mb-0">Información Socioeconómica</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">Procedencia</dt>
+                        <dd class="col-sm-8">{{ estudiante.lugar_procedencia|default:"No registrado" }}</dd>
+
+                        <dt class="col-sm-4">Grupo Familiar</dt>
+                        <dd class="col-sm-8">{{ estudiante.grupo_familiar|default:"No registrado" }}</dd>
+
+                        <dt class="col-sm-4">Beneficios</dt>
+                        <dd class="col-sm-8">{{ estudiante.beneficios_sociales|default:"No registrado" }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-8 order-xl-1">
+            <div class="card">
+                <div class="card-header border-0">
+                    <div class="row align-items-center">
+                        <div class="col-8">
+                            <h3 class="mb-0">Bitácora de Seguimiento</h3>
+                        </div>
+                        <div class="col-4 text-right">
+                            <a href="#!" class="btn btn-sm btn-primary">Nueva Observación</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    {% if bitacoras %}
+                    <div class="timeline timeline-one-side" data-timeline-content="axis"
+                        data-timeline-axis-style="dashed">
+                        {% for bitacora in bitacoras %}
+                        <div class="timeline-block">
+                            <span class="timeline-step badge-success">
+                                <i class="ni ni-bell-55"></i>
+                            </span>
+                            <div class="timeline-content">
+                                <small class="text-muted font-weight-bold">{{ bitacora.fecha_registro|date:"d M Y, H:i"
+                                    }}</small>
+                                <h5 class="mt-3 mb-0">Observación Registrada</h5>
+                                <p class="text-sm mt-1 mb-0">{{ bitacora.observacion }}</p>
+
+                                {% if bitacora.alarma %}
+                                <div class="mt-2">
+                                    <span class="badge badge-danger">Alarma: {{ bitacora.alarma.tipo_alarma.nombre
+                                        }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-secondary" role="alert">
+                        No hay registros en la bitácora para este estudiante.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include "includes/footer.html" %}
+</div>
+{% endblock content %}

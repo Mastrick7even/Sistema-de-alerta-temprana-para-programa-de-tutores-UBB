@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.contrib.auth.mixins import LoginRequiredMixin # Obliga a estar logueado
-from django.views.generic import ListView
+from django.views.generic import ListView, DetailView
 from .models import Estudiante, Usuario
 
 class EstudianteListView(LoginRequiredMixin, ListView):
@@ -18,7 +18,7 @@ class EstudianteListView(LoginRequiredMixin, ListView):
         if django_user.is_superuser:
             return Estudiante.objects.all().order_by('apellido')
         
-# 3. Buscamos el perfil en TU tabla 'Usuario' usando el email
+        # 3. Buscamos el perfil en TU tabla 'Usuario' usando el email
         try:
             perfil_tutor = Usuario.objects.get(email=django_user.email)
             # 4. Filtramos: Solo estudiantes donde tutor_asignado sea este perfil
@@ -27,4 +27,27 @@ class EstudianteListView(LoginRequiredMixin, ListView):
             # Si el usuario no existe en tu tabla SAT, no ve nada
             return Estudiante.objects.none
         
+class EstudianteDetailView(LoginRequiredMixin, DetailView):
+    model = Estudiante
+    template_name = 'sat/estudiante_detail.html'
+    context_object_name = 'estudiante'
+
+    def get_queryset(self):
+
+        django_user = self.request.user
+
+        if django_user.is_superuser:
+            return Estudiante.objects.all()
+        
+        try:
+            perfil_tutor = Usuario.objects.get(email=django_user.email)
+            return Estudiante.objects.filter(tutor_asignado=perfil_tutor)
+        except Usuario.DoesNotExist:
+            return Estudiante.objects.none
+
+    def get_context_data(self, **kwargs): # Este método sirve para enviar datos EXTRA al template. (aquí enviaremos la bitácora del tutorado)
+        context = super().get_context_data(**kwargs) 
+        estudiante_actual = self.object # 'self.object' es el estudiante que Django ya encontró por nosotros
+        context['bitacoras'] = estudiante_actual.bitacora_set.all().order_by('-fecha_registro')
+        return context
 

@@ -107,7 +107,7 @@ Perfil de {{ estudiante.nombre }}
                             <h3 class="mb-0">Bitácora de Seguimiento</h3>
                         </div>
                         <div class="col-4 text-right">
-                            <a href="#!" class="btn btn-sm btn-primary">Nueva Observación</a>
+                            <a href="{% url 'bitacora-create' estudiante.pk %}" class="btn btn-sm btn-primary">Nueva Observación</a>
                         </div>
                     </div>
                 </div>
@@ -122,8 +122,7 @@ Perfil de {{ estudiante.nombre }}
                                 <i class="ni ni-bell-55"></i>
                             </span>
                             <div class="timeline-content">
-                                <small class="text-muted font-weight-bold">{{ bitacora.fecha_registro|date:"d M Y, H:i"
-                                    }}</small>
+                                <small class="text-muted font-weight-bold">{{ bitacora.fecha_registro|date:"d M Y, H:i"}}</small>
                                 <h5 class="mt-3 mb-0">Observación Registrada</h5>
                                 <p class="text-sm mt-1 mb-0">{{ bitacora.observacion }}</p>
 

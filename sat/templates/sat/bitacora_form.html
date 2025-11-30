@@ -1,0 +1,68 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} Nueva Observación {% endblock title %}
+
+{% block content %}
+
+<div class="header bg-primary pb-6">
+  <div class="container-fluid">
+    <div class="header-body">
+      <div class="row align-items-center py-4">
+        <div class="col-lg-6 col-7">
+          <h6 class="h2 text-white d-inline-block mb-0">Nueva Entrada</h6>
+          <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
+            <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
+              <li class="breadcrumb-item"><a href="{% url 'estudiante-list' %}">Estudiantes</a></li>
+              <li class="breadcrumb-item"><a href="{% url 'estudiante-detail' estudiante.pk %}">{{ estudiante.nombre }}</a></li>
+              <li class="breadcrumb-item active" aria-current="page">Nueva Observación</li>
+            </ol>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid mt--6">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header bg-transparent">
+          <h3 class="mb-0">Registrar Observación para {{ estudiante.nombre }} {{ estudiante.apellido }}</h3>
+        </div>
+        
+        <div class="card-body">
+          <form method="post">
+            {% csrf_token %} <div class="form-group">
+                <label class="form-control-label" for="{{ form.observacion.id_for_label }}">
+                    {{ form.observacion.label }}
+                </label>
+                {{ form.observacion }}
+                {% if form.observacion.errors %}
+                    <div class="text-danger small mt-1">{{ form.observacion.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label class="form-control-label text-danger" for="{{ form.alarma.id_for_label }}">
+                    <i class="ni ni-bell-55 mr-1"></i>{{ form.alarma.label }}
+                </label>
+                {{ form.alarma }}
+                <small class="text-muted">Selecciona una alarma solo si detectas un riesgo evidente.</small>
+            </div>
+
+            <div class="text-right">
+                <a href="{% url 'estudiante-detail' estudiante.pk %}" class="btn btn-link text-danger my-4">Cancelar</a>
+                <button type="submit" class="btn btn-primary my-4">Guardar Observación</button>
+            </div>
+
+          </form>
+          </div>
+      </div>
+    </div>
+  </div>
+
+  {% include "includes/footer.html" %}
+</div>
+
+{% endblock content %}

@@ -107,39 +107,79 @@ Perfil de {{ estudiante.nombre }}
                             <h3 class="mb-0">Bitácora de Seguimiento</h3>
                         </div>
                         <div class="col-4 text-right">
-                            <a href="#!" class="btn btn-sm btn-primary">Nueva Observación</a>
+                            <a href="{% url 'bitacora-create' estudiante.pk %}" class="btn btn-sm btn-primary">Nueva
+                                Observación</a>
                         </div>
                     </div>
                 </div>
 
                 <div class="card-body">
                     {% if bitacoras %}
-                    <div class="timeline timeline-one-side" data-timeline-content="axis"
-                        data-timeline-axis-style="dashed">
-                        {% for bitacora in bitacoras %}
-                        <div class="timeline-block">
-                            <span class="timeline-step badge-success">
-                                <i class="ni ni-bell-55"></i>
-                            </span>
-                            <div class="timeline-content">
-                                <small class="text-muted font-weight-bold">{{ bitacora.fecha_registro|date:"d M Y, H:i"
-                                    }}</small>
-                                <h5 class="mt-3 mb-0">Observación Registrada</h5>
-                                <p class="text-sm mt-1 mb-0">{{ bitacora.observacion }}</p>
 
-                                {% if bitacora.alarma %}
-                                <div class="mt-2">
-                                    <span class="badge badge-danger">Alarma: {{ bitacora.alarma.tipo_alarma.nombre
-                                        }}</span>
+                    <div class="list-group list-group-flush">
+
+                        {% for bitacora in bitacoras %}
+                        <div class="card shadow-none border mb-3">
+                            <div class="card-body p-3">
+
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div class="d-flex align-items-center">
+                                        <div class="icon icon-shape bg-gradient-primary text-white rounded-circle shadow-sm mr-3"
+                                            style="width: 32px; height: 32px;">
+                                            <i class="ni ni-chat-round" style="font-size: 0.8rem;"></i>
+                                        </div>
+
+                                        <div>
+                                            <h5 class="text-primary font-weight-bold mb-0">
+                                                {{ bitacora.fecha_registro|date:"D d M Y" }}
+                                            </h5>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <a href="{% url 'bitacora-update' bitacora.pk %}"
+                                            class="btn btn-sm btn-icon-only text-primary" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+
+                                        <button type="button" class="btn btn-sm btn-icon-only text-danger"
+                                            title="Eliminar" data-toggle="modal" data-target="#modal-notification"
+                                            data-url="{% url 'bitacora-delete' bitacora.pk %}"
+                                            onclick="setDeleteUrl(this.getAttribute('data-url'))">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
                                 </div>
-                                {% endif %}
+
+                                <div class="pl-5">
+                                    <p class="text-sm mb-2 text-dark">
+                                        {{ bitacora.observacion }}
+                                    </p>
+
+                                    {% if bitacora.alarma %}
+                                    <div class="mt-2">
+                                        <span class="badge badge-pill badge-danger">
+                                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                                            {{ bitacora.alarma.tipo_alarma.nombre }}
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+
                             </div>
                         </div>
                         {% endfor %}
+
                     </div>
+
                     {% else %}
-                    <div class="alert alert-secondary" role="alert">
-                        No hay registros en la bitácora para este estudiante.
+                    <div class="text-center py-4">
+                        <div class="icon icon-shape bg-gradient-light text-primary rounded-circle mb-3">
+                            <i class="ni ni-ruler-pencil"></i>
+                        </div>
+                        <h5 class="text-muted">Aún no hay observaciones registradas.</h5>
+                        <p class="text-sm text-muted">Utiliza el botón "Nueva Observación" para comenzar el seguimiento.
+                        </p>
                     </div>
                     {% endif %}
                 </div>
@@ -149,4 +189,44 @@ Perfil de {{ estudiante.nombre }}
 
     {% include "includes/footer.html" %}
 </div>
+
+<div class="modal fade" id="modal-notification" tabindex="-1" role="dialog" aria-labelledby="modal-notification"
+    aria-hidden="true">
+    <div class="modal-dialog modal-danger modal-dialog-centered modal-" role="document">
+        <div class="modal-content bg-gradient-danger">
+
+            <div class="modal-header">
+                <h6 class="modal-title" id="modal-title-notification">¡Atención!</h6>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div class="py-3 text-center">
+                    <i class="ni ni-bell-55 ni-3x"></i>
+                    <h4 class="heading mt-4">¿Estás seguro de eliminar esto?</h4>
+                    <p>Esta acción borrará permanentemente la observación de la base de datos. No se puede deshacer.</p>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <form id="delete-form" method="post" action="">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-white">Sí, Eliminar</button>
+                </form>
+                <button type="button" class="btn btn-link text-white ml-auto" data-dismiss="modal">Cancelar</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    function setDeleteUrl(url) {
+        // Busca el formulario dentro del modal y le cambia la URL de destino
+        document.getElementById('delete-form').action = url;
+    }
+</script>
+
 {% endblock content %}

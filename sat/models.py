@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 # Create your models here.
 
@@ -15,6 +16,14 @@ class Alarma(models.Model):
 
     class Meta:
         db_table = 'alarma'
+
+    def __str__(self):
+        # Esto le dice a Django: "Cuando tengas que mostrar una alarma en un menú,
+        # muestra el nombre de su TIPO".
+        #return self.tipo_alarma.nombre 
+        
+        # O si prefieres que se vea el tipo Y la descripción corta:
+        return f"{self.tipo_alarma.nombre} - {self.descripcion}"
 
 
 class Asistencia(models.Model):
@@ -40,7 +49,7 @@ class Asistencia(models.Model):
 
 class Bitacora(models.Model):
     id_bitacora = models.AutoField(primary_key=True)
-    fecha_registro = models.DateTimeField()
+    fecha_registro = models.DateTimeField(default=timezone.now)
     observacion = models.TextField(blank=True, null=True)
 
     estudiante = models.ForeignKey(
@@ -222,7 +231,7 @@ class TipoTutoria(models.Model):
 
 class Tutoria(models.Model):
     id_tutoria = models.AutoField(primary_key=True)
-    fecha = models.DateTimeField()
+    fecha = models.DateTimeField(default=timezone.now)
     tema_tutoria = models.TextField(blank=True, null=True)
     lugar = models.CharField(max_length=100)
 

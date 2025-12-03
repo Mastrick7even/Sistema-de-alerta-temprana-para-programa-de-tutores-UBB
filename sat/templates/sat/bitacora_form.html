@@ -28,41 +28,88 @@
     <div class="col-lg-8">
       <div class="card">
         <div class="card-header bg-transparent">
-          <h3 class="mb-0">Registrar Observación para {{ estudiante.nombre }} {{ estudiante.apellido }}</h3>
+          <h3 class="mb-0">{{ titulo|default:"Registrar Observación" }} para {{ estudiante.nombre }}</h3>
         </div>
-        
+
         <div class="card-body">
           <form method="post">
-            {% csrf_token %} <div class="form-group">
-                <label class="form-control-label" for="{{ form.observacion.id_for_label }}">
-                    {{ form.observacion.label }}
-                </label>
-                {{ form.observacion }}
-                {% if form.observacion.errors %}
-                    <div class="text-danger small mt-1">{{ form.observacion.errors }}</div>
-                {% endif %}
+            {% csrf_token %}
+            <div class="form-group">
+              <label class="form-control-label" for="{{ form.fecha_registro.id_for_label }}">
+                {{ form.fecha_registro.label }}
+              </label>
+              {{ form.fecha_registro }}
+              {% if form.fecha_registro.errors %}
+              <div class="text-danger small mt-1">{{ form.fecha_registro.errors }}</div>
+              {% endif %}
+            </div>
+            <div class="form-group">
+              <label class="form-control-label" for="{{ form.observacion.id_for_label }}">
+                {{ form.observacion.label }}
+              </label>
+              {{ form.observacion }}
+              {% if form.observacion.errors %}
+              <div class="text-danger small mt-1">{{ form.observacion.errors }}</div>
+              {% endif %}
             </div>
 
             <div class="form-group">
-                <label class="form-control-label text-danger" for="{{ form.alarma.id_for_label }}">
-                    <i class="ni ni-bell-55 mr-1"></i>{{ form.alarma.label }}
-                </label>
-                {{ form.alarma }}
-                <small class="text-muted">Selecciona una alarma solo si detectas un riesgo evidente.</small>
+              <label class="form-control-label text-danger" for="{{ form.alarma.id_for_label }}">
+                <i class="ni ni-bell-55 mr-1"></i>{{ form.alarma.label }}
+              </label>
+              {{ form.alarma }}
+              <small class="text-muted">Selecciona una alarma solo si detectas un riesgo evidente.</small>
             </div>
 
             <div class="text-right">
-                <a href="{% url 'estudiante-detail' estudiante.pk %}" class="btn btn-link text-danger my-4">Cancelar</a>
-                <button type="submit" class="btn btn-primary my-4">Guardar Observación</button>
+              <a href="{% url 'estudiante-detail' estudiante.pk %}" class="btn btn-link text-danger my-4">Cancelar</a>
+              <button type="submit" class="btn btn-primary my-4">Guardar Observación</button>
             </div>
 
           </form>
-          </div>
+        </div>
       </div>
     </div>
   </div>
 
   {% include "includes/footer.html" %}
 </div>
+<div class="modal fade" id="modal-notification" tabindex="-1" role="dialog" aria-labelledby="modal-notification" aria-hidden="true">
+    <div class="modal-dialog modal-danger modal-dialog-centered modal-" role="document">
+        <div class="modal-content bg-gradient-danger">
+            
+            <div class="modal-header">
+                <h6 class="modal-title" id="modal-title-notification">¡Atención!</h6>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="py-3 text-center">
+                    <i class="ni ni-bell-55 ni-3x"></i>
+                    <h4 class="heading mt-4">¿Estás seguro de eliminar esto?</h4>
+                    <p>Esta acción borrará permanentemente la observación de la base de datos. No se puede deshacer.</p>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <form id="delete-form" method="post" action="">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-white">Sí, Eliminar</button>
+                </form>
+                <button type="button" class="btn btn-link text-white ml-auto" data-dismiss="modal">Cancelar</button>
+            </div>
+            
+        </div>
+    </div>
+</div>
+
+<script>
+    function setDeleteUrl(url) {
+        // Busca el formulario dentro del modal y le cambia la URL de destino
+        document.getElementById('delete-form').action = url;
+    }
+</script>
 
 {% endblock content %}

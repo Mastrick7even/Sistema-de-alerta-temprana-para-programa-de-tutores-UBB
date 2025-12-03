@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from django.contrib.auth.mixins import LoginRequiredMixin # Obliga a estar logueado
-from django.views.generic import ListView, DetailView, CreateView
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from .models import Estudiante, Usuario, Bitacora
 from django.shortcuts import get_object_or_404
 from .forms import BitacoraForm
@@ -85,4 +85,30 @@ class BitacoraCreateView(LoginRequiredMixin, CreateView):
     def get_success_url(self):
         """ Una vez guardado, volvemos al perfil del estudiante """
         return reverse_lazy('estudiante-detail', kwargs={'pk': self.estudiante.pk})
+
+# === VISTA PARA EDITAR ===
+class BitacoraUpdateView(LoginRequiredMixin, UpdateView):
+    model = Bitacora
+    form_class = BitacoraForm  # <--- IMPORTANTE: Usamos tu form con calendario
+    template_name = 'sat/bitacora_form.html' # Reutilizamos el mismo HTML
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Pasamos el estudiante para que el botón "Cancelar" sepa dónde volver
+        context['estudiante'] = self.object.estudiante
+        context['titulo'] = 'Editar Observación' # Para cambiar el título en el HTML
+        return context
+
+    def get_success_url(self):
+        # Al guardar, volvemos al perfil del estudiante
+        return reverse_lazy('estudiante-detail', kwargs={'pk': self.object.estudiante.pk})
+
+# === VISTA PARA BORRAR ===
+class BitacoraDeleteView(LoginRequiredMixin, DeleteView):
+    model = Bitacora
+    template_name = 'sat/bitacora_confirm_delete.html' # HTML de confirmación
+
+    def get_success_url(self):
+        # Al borrar, recarga la misma página del perfil
+        return reverse_lazy('estudiante-detail', kwargs={'pk': self.object.estudiante.pk})
 

@@ -1,0 +1,101 @@
+/* =========================================
+   VARIABLES GLOBALES (Paleta UBB)
+   ========================================= */
+:root {
+    /* Pantone 293 CVC (Azul Principal) */
+    --ubb-blue: #014898;
+    /* Variante más oscura para gradientes y hovers (generada a ojo para profundidad) */
+    --ubb-blue-dark: #003366;
+
+    /* Pantone P 179-3 C (Gris) */
+    --ubb-grey: #B9BBBB;
+
+    /* Pantone Warm Red (Rojo Alerta) */
+    --ubb-red: #E41B1A;
+
+    /* Pantone 123 CVC (Amarillo/Naranja) */
+    --ubb-yellow: #F9B214;
+}
+
+/* =========================================
+   SOBRESCRIBIR ESTILOS DE ARGON
+   ========================================= */
+
+/* 1. COLOR PRIMARIO (Reemplaza el morado/azul de Argon por Azul UBB) */
+
+/* Fondos sólidos (Sidebar activa, tarjetas, etc.) */
+.bg-primary {
+    background-color: var(--ubb-blue) !important;
+}
+
+/* Botones Primarios (Guardar, Nuevo, Editar) */
+.btn-primary {
+    background-color: var(--ubb-blue) !important;
+    border-color: var(--ubb-blue) !important;
+    box-shadow: 0 4px 6px rgba(1, 72, 152, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.btn-primary:hover {
+    background-color: var(--ubb-blue-dark) !important;
+    border-color: var(--ubb-blue-dark) !important;
+}
+
+/* Textos y Enlaces Primarios */
+.text-primary,
+a.text-primary:hover,
+a.text-primary:focus {
+    color: var(--ubb-blue) !important;
+}
+
+/* Iconos de la línea de tiempo */
+.timeline-step.badge-primary {
+    background-color: var(--ubb-blue) !important;
+    /* El punto azul del timeline */
+    border-color: var(--ubb-blue) !important;
+}
+
+/* 2. GRADIENTES (Para el Header y Barras Superiores) */
+
+/* Reemplaza el gradiente morado clásico de Argon */
+.bg-gradient-primary {
+    background: linear-gradient(87deg, var(--ubb-blue) 0, var(--ubb-blue-dark) 100%) !important;
+}
+
+/* Reemplaza el gradiente oscuro ("default") que se usa en el perfil */
+.bg-gradient-default {
+    background: linear-gradient(87deg, var(--ubb-blue-dark) 0, var(--ubb-blue) 100%) !important;
+}
+
+/* 3. ALERTAS Y PELIGRO (Rojo UBB) */
+
+.text-danger {
+    color: var(--ubb-red) !important;
+}
+
+.btn-danger {
+    background-color: var(--ubb-red) !important;
+    border-color: var(--ubb-red) !important;
+}
+
+.badge-danger {
+    background-color: var(--ubb-red) !important;
+    color: white;
+}
+
+/* 4. ADVERTENCIAS (Amarillo UBB) */
+
+.text-warning {
+    color: var(--ubb-yellow) !important;
+}
+
+.badge-warning {
+    background-color: var(--ubb-yellow) !important;
+    color: #212529;
+    /* Texto oscuro para que se lea bien sobre amarillo */
+}
+
+/* 5. LOGO (Para que se vea bien de tamaño en el sidebar) */
+.navbar-vertical .navbar-brand>.navbar-brand-img {
+    max-height: 6.25rem;
+    /* 100px */
+}

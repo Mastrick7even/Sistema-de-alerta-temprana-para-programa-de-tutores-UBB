@@ -1,0 +1,295 @@
+{% extends 'layouts/base.html' %}
+{% load static %}
+
+{% block title %} Dashboard {% endblock title %}
+
+{% block content %}
+
+<div class="header bg-primary pb-6">
+  <div class="container-fluid">
+    <div class="header-body">
+      <div class="row align-items-center py-4">
+        <div class="col-lg-6 col-7">
+          <h6 class="h2 text-white d-inline-block mb-0">Resumen General</h6>
+        </div>
+      </div>
+
+      <div class="row">
+
+        <div class="col-xl-3 col-md-6">
+          <div class="card card-stats">
+            <div class="card-body">
+              <div class="row">
+                <div class="col">
+                  {% if es_tutor %}
+                  <h5 class="card-title text-uppercase text-muted mb-0">Mis Asignados</h5>
+                  {% else %}
+                  <h5 class="card-title text-uppercase text-muted mb-0">Total Carrera</h5>
+                  {% endif %}
+                  <span class="h2 font-weight-bold mb-0">{{ kpi_total }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+          <div class="card card-stats">
+            <div class="card-body">
+              <div class="row">
+                <div class="col">
+                  <h5 class="card-title text-uppercase text-muted mb-0">Riesgo Alto</h5>
+                  <span class="h2 font-weight-bold mb-0 text-danger">{{ kpi_alto }}</span>
+                </div>
+                <div class="col-auto">
+                  <div class="icon icon-shape bg-gradient-red text-white rounded-circle shadow">
+                    <i class="ni ni-ambulance"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+          <div class="card card-stats">
+            <div class="card-body">
+              <div class="row">
+                <div class="col">
+                  <h5 class="card-title text-uppercase text-muted mb-0">Riesgo Medio</h5>
+                  <span class="h2 font-weight-bold mb-0 text-warning">{{ kpi_medio }}</span>
+                </div>
+                <div class="col-auto">
+                  <div class="icon icon-shape bg-gradient-orange text-white rounded-circle shadow">
+                    <i class="ni ni-sound-wave"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+          <div class="card card-stats">
+            <div class="card-body">
+              <div class="row">
+                <div class="col">
+                  <h5 class="card-title text-uppercase text-muted mb-0">Riesgo Bajo</h5>
+                  <span class="h2 font-weight-bold mb-0 text-success">{{ kpi_bajo }}</span>
+                </div>
+                <div class="col-auto">
+                  <div class="icon icon-shape bg-gradient-green text-white rounded-circle shadow">
+                    <i class="ni ni-check-bold"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="container-fluid mt--6">
+  {% if es_encargado or user.is_superuser %}
+  <div class="row">
+    <div class="col-xl-4">
+      <div class="card">
+        <div class="card-header bg-transparent">
+          <div class="row align-items-center">
+            <div class="col">
+              <h6 class="text-uppercase text-muted ls-1 mb-1">Vista General</h6>
+              <h5 class="h3 mb-0">Distribución de Riesgo</h5>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="chart">
+            <canvas id="chart-riesgo" class="chart-canvas"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-xl-8">
+      <div class="card">
+        <div class="card-header bg-transparent">
+          <div class="row align-items-center">
+            <div class="col">
+              <h6 class="text-uppercase text-muted ls-1 mb-1">Tendencia</h6>
+              <h5 class="h3 mb-0">Estudiantes por Año de Ingreso</h5>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="chart">
+            <canvas id="chart-ingreso" class="chart-canvas"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="row">
+    <div class="col-xl-12">
+      <div class="card">
+        <div class="card-header border-0">
+          <div class="row align-items-center">
+            <div class="col">
+              <h3 class="mb-0">Actividad Reciente (Últimas Observaciones)</h3>
+            </div>
+            <div class="col text-right">
+              <a href="{% url 'estudiante-list' %}" class="btn btn-sm btn-primary">Ver todos</a>
+            </div>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table align-items-center table-flush">
+            <thead class="thead-light">
+              <tr>
+                <th scope="col">Estudiante</th>
+
+                {% if es_encargado or user.is_superuser %}
+                <th scope="col">Carrera</th>
+                {% endif %}
+
+                <th scope="col">Fecha</th>
+                <th scope="col">Observación</th>
+                <th scope="col">Alerta</th>
+                <th scope="col">Acción</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for b in ultimas_bitacoras %}
+              <tr>
+                <th scope="row">
+                  {{ b.estudiante.nombre }} {{ b.estudiante.apellido }}
+                </th>
+
+                {% if es_encargado or user.is_superuser %}
+                <td>
+                  {{ b.estudiante.carrera.nombre }}
+                </td>
+                {% endif %}
+
+                <td>
+                  {{ b.fecha_registro|date:"d/m/Y" }}
+                </td>
+                <td>
+                  {{ b.observacion|truncatechars:50 }}
+                </td>
+                <td>
+                  {% if b.alarma %}
+                  <span class="badge badge-dot mr-4">
+                    <i class="bg-danger"></i> {{ b.alarma }}
+                  </span>
+                  {% else %}
+                  -
+                  {% endif %}
+                </td>
+                <td>
+                  <a href="{% url 'estudiante-detail' b.estudiante.pk %}" class="btn btn-sm btn-neutral">Ver</a>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="5" class="text-center py-4">No hay actividad reciente.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% include "includes/footer.html" %}
+</div>
+
+<script src="{% static 'assets/vendor/chart.js/dist/Chart.min.js' %}"></script>
+<script src="{% static 'assets/vendor/chart.js/dist/Chart.extension.js' %}"></script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    // === GRÁFICO DONUT (Distribución de Riesgo) ===
+    var ctx = document.getElementById('chart-riesgo').getContext('2d');
+
+    // Datos desde Django (con valores por defecto si no existen)
+    var datosRiesgo = {% if data_grafico %}{{ data_grafico| safe }}{% else %}[0, 0, 0]{% endif %};
+
+  var chart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Alto', 'Medio', 'Bajo'],
+      datasets: [{
+        data: datosRiesgo,
+        backgroundColor: [
+          '#f5365c', // Rojo (Alto)
+          '#fb6340', // Naranja (Medio)
+          '#2dce89'  // Verde (Bajo)
+        ],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      legend: {
+        position: 'right',
+        labels: {
+          usePointStyle: true,
+          padding: 20,
+          fontSize: 12
+        }
+      },
+      cutoutPercentage: 70,
+      tooltips: {
+        callbacks: {
+          label: function (tooltipItem, data) {
+            var dataset = data.datasets[tooltipItem.datasetIndex];
+            var total = dataset.data.reduce(function (previousValue, currentValue) {
+              return previousValue + currentValue;
+            });
+            var currentValue = dataset.data[tooltipItem.index];
+            var percentage = Math.floor(((currentValue / total) * 100) + 0.5);
+            return data.labels[tooltipItem.index] + ": " + currentValue + " (" + percentage + "%)";
+          }
+        }
+      }
+    }
+  });
+
+  // === GRÁFICO DE BARRAS (Estudiantes por Año de Ingreso) ===
+  var ctx2 = document.getElementById('chart-ingreso').getContext('2d');
+  var chart2 = new Chart(ctx2, {
+    type: 'bar',
+    data: {
+      labels: {{ labels_ingreso| safe }},
+  datasets: [{
+    label: 'Estudiantes',
+    data: {{ data_ingreso| safe }},
+    backgroundColor: '#5e72e4',
+    barThickness: 20
+            }]
+        },
+  options: {
+    responsive: true,
+      maintainAspectRatio: false,
+        scales: {
+      yAxes: [{
+        ticks: {
+          beginAtZero: true,
+          stepSize: 1
+        }
+      }]
+    }
+  }
+    });
+});
+</script>
+
+{% endblock content %}

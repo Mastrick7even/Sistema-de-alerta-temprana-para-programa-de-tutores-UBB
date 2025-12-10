@@ -1,10 +1,11 @@
 from django.shortcuts import render
 from django.contrib.auth.mixins import LoginRequiredMixin # Obliga a estar logueado
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
-from .models import Estudiante, Usuario, Bitacora
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
+from .models import Estudiante, Usuario, Bitacora, Estado
 from django.shortcuts import get_object_or_404
 from .forms import BitacoraForm
 from django.urls import reverse_lazy
+from django.db.models import Count
 
 class EstudianteListView(LoginRequiredMixin, ListView):
     model = Estudiante
@@ -111,4 +112,85 @@ class BitacoraDeleteView(LoginRequiredMixin, DeleteView):
     def get_success_url(self):
         # Al borrar, recarga la misma página del perfil
         return reverse_lazy('estudiante-detail', kwargs={'pk': self.object.estudiante.pk})
+
+# === VISTA PARA EL DASHBOARD ===
+class DashboardView(LoginRequiredMixin, TemplateView):
+    template_name = 'sat/dashboard.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        django_user = self.request.user
+        
+        es_tutor = False
+        es_encargado = False
+        
+        if not django_user.is_superuser:
+            try:
+                perfil = Usuario.objects.get(email=django_user.email)
+                if perfil.rol.nombre == 'Tutor':
+                    es_tutor = True
+                elif perfil.rol.nombre == 'Encargado de Carrera': # Asegúrate del nombre exacto en BD
+                    es_encargado = True
+            except Usuario.DoesNotExist:
+                pass # O manejar error
+        
+        context['es_tutor'] = es_tutor
+        context['es_encargado'] = es_encargado
+
+        # 1. Determinar qué estudiantes ver (Lógica de Permisos)
+        if django_user.is_superuser:
+            mis_estudiantes = Estudiante.objects.all()
+        else:
+            try:
+                # Buscamos al usuario SAT por email
+                perfil_usuario = Usuario.objects.get(email=django_user.email)
+                
+                # Si es Tutor, filtramos. Si es Encargado, ve todo.
+                if perfil_usuario.rol.nombre == 'Tutor':
+                    mis_estudiantes = Estudiante.objects.filter(tutor_asignado=perfil_usuario)
+                else:
+                    # Asumimos que es Encargado (ve todo)
+                    # O podrías filtrar por carrera si el encargado tiene una asignada
+                    mis_estudiantes = Estudiante.objects.all()
+            except Usuario.DoesNotExist:
+                mis_estudiantes = Estudiante.objects.none()
+
+        # 2. Calcular KPIs (Indicadores)
+        total_estudiantes = mis_estudiantes.count()
+        
+        # Contamos según el nombre del Estado (Ajusta los nombres a lo que pusiste en tu BD)
+        # Usamos __icontains para que busque "Alto" aunque sea "Riesgo Alto"
+        riesgo_alto = mis_estudiantes.filter(estado_actual__nombre__icontains='Alto').count()
+        riesgo_medio = mis_estudiantes.filter(estado_actual__nombre__icontains='Medio').count()
+        riesgo_bajo = mis_estudiantes.filter(estado_actual__nombre__icontains='Bajo').count()
+
+        # 3. Bitácoras recientes (de MIS estudiantes)
+        ultimas_bitacoras = Bitacora.objects.filter(
+            estudiante__in=mis_estudiantes
+        ).order_by('-fecha_registro')[:5] # Solo las 5 últimas
+
+        # 4. Inyectar datos al HTML
+        context['kpi_total'] = total_estudiantes
+        context['kpi_alto'] = riesgo_alto
+        context['kpi_medio'] = riesgo_medio
+        context['kpi_bajo'] = riesgo_bajo
+        context['ultimas_bitacoras'] = ultimas_bitacoras
+
+        # Datos para el gráfico [Alto, Medio, Bajo, Sin Riesgo]
+        # Asegúrate que el orden coincida con los colores que pondremos en el HTML
+        data_grafico = [riesgo_alto, riesgo_medio, riesgo_bajo] 
+        
+        context['data_grafico'] = data_grafico
+
+        # Calcular estudiantes por año de ingreso
+        datos_ingreso = mis_estudiantes.values('anio_ingreso').annotate(total=Count('id_estudiante')).order_by('anio_ingreso')
+
+        # Preparamos dos listas para Chart.js
+        labels_ingreso = [str(d['anio_ingreso']) for d in datos_ingreso]
+        data_ingreso = [d['total'] for d in datos_ingreso]
+
+        context['labels_ingreso'] = labels_ingreso
+        context['data_ingreso'] = data_ingreso
+        
+        return context
 

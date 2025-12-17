@@ -120,7 +120,7 @@ STATICFILES_DIRS = (
 )
 
 # ¡ESTO ES LO QUE HACE LA MAGIA! Comprime y cachea los archivos
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 #############################################################
 #############################################################

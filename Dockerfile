@@ -1,4 +1,4 @@
-FROM python:3.9-slim
+FROM python:3.11-slim
 
 # 1. Variables de entorno para Python
 ENV PYTHONDONTWRITEBYTECODE 1

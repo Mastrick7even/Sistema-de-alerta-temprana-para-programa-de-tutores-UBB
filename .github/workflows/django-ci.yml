@@ -12,7 +12,7 @@ jobs: # Que hará
     strategy:
       max-parallel: 4
       matrix:
-        python-version: [3.10] # Actualizado a 3.10 para compatibilidad con dependencias
+        python-version: ['3.10'] # Actualizado a 3.10 para compatibilidad con dependencias
 
     steps: # Check en donde se revisa el codigo
     - uses: actions/checkout@v3

@@ -6,19 +6,18 @@ Copyright (c) 2019 - present AppSeed.us
 import os
 from decouple import config
 from unipath import Path
+import dj_database_url
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = Path(__file__).parent
 CORE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY', default='S#perS3crEt_1122')
+# 1. SEGURIDAD: Leer del entorno o usar valor por defecto inseguro (solo para que no falle el build)
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-clave-dummy-para-build')
+DEBUG = config('DEBUG', default=False, cast=bool)
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
-
-# load production server from .env
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', config('SERVER', default='127.0.0.1')]
+# 2. ALLOWED HOSTS: Permitir todo en el examen es más seguro para evitar bloqueos
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -67,18 +66,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
-# Database
-# https://docs.djangoproject.com/en/3.0/ref/settings/#databases
-
+# 3. BASE DE DATOS: Configuración Híbrida
+# Intenta leer DATABASE_URL (estándar Docker), si no, usa una configuración manual local
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'barriagada2_bd',             # Tu nombre de BD
-        'USER': 'barriagada',          # El usuario que usas en DBeaver
-        'PASSWORD': 'bastian2025',   # La contraseña que usas en DBeaver
-        'HOST': 'pgsqltrans.face.ubiobio.cl', # El host de la UBB
-        'PORT': '5432',                      # El puerto por defecto de Postgres
-    }
+    'default': dj_database_url.config(
+        default=f"postgres://{os.environ.get('POSTGRES_USER', 'postgres')}:{os.environ.get('POSTGRES_PASSWORD', 'postgres')}@{os.environ.get('POSTGRES_HOST', 'db')}:5432/{os.environ.get('POSTGRES_DB', 'sat_db')}",
+        conn_max_age=600
+    )
 }
 
 # Password validation
@@ -125,6 +119,8 @@ STATICFILES_DIRS = (
     os.path.join(CORE_DIR, 'apps/static'),
 )
 
+# ¡ESTO ES LO QUE HACE LA MAGIA! Comprime y cachea los archivos
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 #############################################################
 #############################################################

@@ -1,28 +1,28 @@
 version: '3.8'
+
 services:
-  appseed-app:
-    container_name: appseed_app
-    restart: always
-    env_file: .env
+  # Tu aplicación Django
+  web:
     build: .
-    networks:
-      - db_network
-      - web_network
-  nginx:
-    container_name: nginx
-    restart: always
-    image: "nginx:latest"
-    ports:
-      - "85:85"
+    container_name: sat_web
+    command: gunicorn core.wsgi:application --bind 0.0.0.0:8000
     volumes:
-      - ./nginx:/etc/nginx/conf.d
-    networks:
-      - web_network
-    depends_on: 
-      - appseed-app
-networks:
-  db_network:
-    driver: bridge
-  web_network:
-    driver: bridge
- 
+      - .:/app
+    ports:
+      - "80:8000" # Mapeamos puerto 80 del servidor al 8000 de Gunicorn
+    depends_on:
+      - db
+    env_file:
+      - .env
+
+  # La Base de Datos (Aislada, nueva y limpia)
+  db:
+    image: postgres:13-alpine
+    container_name: sat_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    env_file:
+      - .env
+
+volumes:
+  postgres_data:

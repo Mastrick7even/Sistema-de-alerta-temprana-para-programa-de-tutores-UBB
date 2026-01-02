@@ -7,7 +7,24 @@ from sat.models import (
 )
 
 # Configurar Faker para datos chilenos
-fake = Faker(['es_CL'])
+#fake = Faker(['es_CL'])
+
+# Configurar Faker (es_ES compatible con Faker 8.12.1)
+fake = Faker('es_ES')
+
+# Función para generar RUT chileno válido
+def generar_rut():
+    """Genera un RUT chileno válido con formato XX.XXX.XXX-X"""
+    numero = random.randint(5000000, 25000000)
+    # Calcular dígito verificador
+    reversed_digits = map(int, reversed(str(numero)))
+    factors = [2, 3, 4, 5, 6, 7]
+    s = sum(d * factors[i % 6] for i, d in enumerate(reversed_digits))
+    dv = (-s) % 11
+    dv = 'K' if dv == 10 else str(dv)
+    # Formatear RUT
+    rut_str = f"{numero:,}".replace(',', '.')
+    return f"{rut_str}-{dv}"
 
 class Command(BaseCommand):
     help = 'Puebla la base de datos con datos sintéticos coherentes'
@@ -34,7 +51,7 @@ class Command(BaseCommand):
 
             # 3. Crear Encargado de Carrera (1 por carrera)
             encargado = Usuario.objects.create(
-                rut=fake.rut(),
+                rut=generar_rut(),
                 nombre=fake.first_name(),
                 apellido=fake.last_name(),
                 email=fake.unique.email(),
@@ -49,7 +66,7 @@ class Command(BaseCommand):
             # 4. Crear Tutores (3 por carrera)
             for _ in range(3):
                 tutor = Usuario.objects.create(
-                    rut=fake.rut(),
+                    rut=generar_rut(),
                     nombre=fake.first_name(),
                     apellido=fake.last_name(),
                     email=fake.unique.email(),
@@ -63,7 +80,7 @@ class Command(BaseCommand):
                     estado_random = random.choices(objs_estados, weights=[50, 30, 15, 5], k=1)[0]
                     
                     Estudiante.objects.create(
-                        rut=fake.unique.rut(),
+                        rut=generar_rut(),
                         nombre=fake.first_name(),
                         apellido=fake.last_name(),
                         email=fake.unique.email(),

@@ -66,11 +66,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
-# 3. BASE DE DATOS: Configuración Híbrida
-# Intenta leer DATABASE_URL (estándar Docker), si no, usa una configuración manual local
+# 3. BASE DE DATOS: Configuración
+# Lee DATABASE_URL del .env si existe, sino construye la URL con variables individuales
 DATABASES = {
     'default': dj_database_url.config(
-        default=f"postgres://{os.environ.get('POSTGRES_USER', 'postgres')}:{os.environ.get('POSTGRES_PASSWORD', 'postgres')}@{os.environ.get('POSTGRES_HOST', 'db')}:5432/{os.environ.get('POSTGRES_DB', 'sat_db')}",
+        default=f"postgres://{config('POSTGRES_USER', default='postgres')}:{config('POSTGRES_PASSWORD', default='postgres')}@{config('POSTGRES_HOST', default='localhost')}:5432/{config('POSTGRES_DB', default='sat_db')}",
         conn_max_age=600
     )
 }

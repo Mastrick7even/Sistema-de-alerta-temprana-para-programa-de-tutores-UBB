@@ -14,6 +14,10 @@ services:
       - db
     env_file:
       - .env
+    environment:
+      # Sobrescribe POSTGRES_HOST para usar el contenedor Docker
+      - POSTGRES_HOST=db
+      - POSTGRES_DB=sat_db
 
   # La Base de Datos (Aislada, nueva y limpia)
   db:

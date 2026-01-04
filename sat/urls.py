@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import EstudianteListView, EstudianteDetailView, BitacoraCreateView, BitacoraUpdateView, BitacoraDeleteView, DashboardView
+from .views import EstudianteListView, EstudianteDetailView, BitacoraCreateView, BitacoraUpdateView, BitacoraDeleteView, DashboardView, ReporteEstudiantePDF
 
 urlpatterns = [
     path('', DashboardView.as_view(), name='home'), 
@@ -11,4 +11,6 @@ urlpatterns = [
     path('bitacora/<int:pk>/editar/', BitacoraUpdateView.as_view(), name='bitacora-update'),
     # Borrar: /bitacora/123/borrar/
     path('bitacora/<int:pk>/borrar/', BitacoraDeleteView.as_view(), name='bitacora-delete'),
+    # PDF: /estudiante/123/pdf/
+    path('estudiante/<int:pk>/pdf/', ReporteEstudiantePDF.as_view(), name='estudiante-pdf'),
 ]

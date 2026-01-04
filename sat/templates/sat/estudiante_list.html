@@ -5,82 +5,230 @@
 {% block content %}
 
 <div class="header bg-primary pb-6">
-    <div class="container-fluid">
-        <div class="header-body">
-            <div class="row align-items-center py-4">
-                <div class="col-lg-6 col-7">
-                    <h6 class="h2 text-white d-inline-block mb-0">Estudiantes</h6>
-                    <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
-                        <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
-                            <li class="breadcrumb-item"><a href="/"><i class="fas fa-home"></i></a></li>
-                            <li class="breadcrumb-item active" aria-current="page">Listado</li>
-                        </ol>
-                    </nav>
-                </div>
-            </div>
+  <div class="container-fluid">
+    <div class="header-body">
+      <div class="row align-items-center py-4">
+        <div class="col-lg-6 col-7">
+          <h6 class="h2 text-white d-inline-block mb-0">Estudiantes</h6>
+          <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
+            <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
+              <li class="breadcrumb-item"><a href="/"><i class="fas fa-home"></i></a></li>
+              <li class="breadcrumb-item active" aria-current="page">Listado</li>
+            </ol>
+          </nav>
         </div>
+      </div>
     </div>
+  </div>
 </div>
 
 <div class="container-fluid mt--6">
-    <div class="row">
-        <div class="col">
-            <div class="card">
-                <div class="card-header border-0">
-                    <h3 class="mb-0">Estudiantes Asignados</h3>
-                </div>
-                <div class="table-responsive">
-                    <table class="table align-items-center table-flush">
-                        <thead class="thead-light">
-                            <tr>
-                                <th scope="col" class="sort" data-sort="name">Nombre</th>
-                                <th scope="col" class="sort" data-sort="rut">RUT</th>
-                                <th scope="col" class="sort" data-sort="carrera">Carrera</th>
-                                <th scope="col" class="sort" data-sort="status">Riesgo</th>
-                                <th scope="col">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody class="list">
-                            {% for estudiante in estudiantes %}
-                            <tr>
-                                <th scope="row">
-                                    <div class="media align-items-center">
-                                        <div class="media-body">
-                                            <span class="name mb-0 text-sm">{{ estudiante.nombre }} {{ estudiante.apellido }}</span>
-                                        </div>
-                                    </div>
-                                </th>
-                                <td>
-                                    {{ estudiante.rut }}
-                                </td>
-                                <td>
-                                    {{ estudiante.carrera.nombre }}
-                                </td>
-                                <td>
-                                    <span class="badge badge-dot mr-4">
-                                        <i class="bg-warning"></i>
-                                        <span class="status">{{ estudiante.estado_actual.nombre }}</span>
-                                    </span>
-                                </td>
-                                <td>
-                                    <a href="{% url 'estudiante-detail' estudiante.pk %}" class="btn btn-sm btn-neutral">Ver Perfil</a>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="5" class="text-center">No hay estudiantes registrados.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                <div class="card-footer py-4">
-                </div>
+  <div class="row">
+    <div class="col">
+      <div class="card">
+        <div class="card-header border-0">
+          <div class="row align-items-center">
+            <div class="col">
+              <h3 class="mb-0">Listado de Estudiantes</h3>
             </div>
-        </div>
-    </div>
+          </div>
 
-    {% include "includes/footer.html" %}
+          <div class="row mt-3">
+            <div class="col-12">
+              <form method="GET" action="">
+                <div class="row">
+
+                  <div class="col-md-4">
+                    <div class="form-group">
+                      <div class="input-group input-group-merge input-group-alternative mb-0">
+                        <div class="input-group-prepend">
+                          <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        </div>
+                        <input class="form-control" placeholder="Buscar por nombre o RUT" type="text" name="q"
+                          value="{{ request.GET.q }}">
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-md-3">
+                    <div class="form-group">
+                      <select class="form-control" name="estado">
+                        <option value="">Todos los Riesgos</option>
+                        {% for estado in lista_estados %}
+                        <option value="{{ estado.id_estado }}" {% if request.GET.estado|add:"0" == estado.id_estado %} selected{% endif %}>
+                          {{ estado.nombre }}
+                        </option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="col-md-3">
+                    <div class="form-group">
+                      <select class="form-control" name="carrera">
+                        <option value="">Todas las Carreras</option>
+                        {% for carrera in lista_carreras %}
+                        <option value="{{ carrera.id_carrera }}" {% if request.GET.carrera|add:"0" == carrera.id_carrera %} selected{% endif %}>
+                          {{ carrera.nombre }}
+                        </option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary btn-block">Filtrar</button>
+                    {% if request.GET %}
+                    <a href="{% url 'estudiante-list' %}"
+                      class="btn btn-outline-secondary btn-block btn-sm mt-2">Limpiar</a>
+                    {% endif %}
+                  </div>
+
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table align-items-center table-flush">
+            <thead class="thead-light">
+              <tr>
+                <th scope="col" class="sort" data-sort="name">Nombre</th>
+                <th scope="col" class="sort" data-sort="rut">RUT</th>
+                <th scope="col" class="sort" data-sort="carrera">Carrera</th>
+                <th scope="col" class="sort" data-sort="status">Riesgo</th>
+                <th scope="col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="list">
+              {% for estudiante in estudiantes %}
+              <tr>
+                <th scope="row">
+                  <div class="media align-items-center">
+                    <div class="media-body">
+                      <span class="name mb-0 text-sm">{{ estudiante.nombre }} {{ estudiante.apellido }}</span>
+                    </div>
+                  </div>
+                </th>
+                <td>
+                  {{ estudiante.rut }}
+                </td>
+                <td>
+                  {{ estudiante.carrera.nombre }}
+                </td>
+                <td>
+                  <span class="badge badge-dot mr-4">
+                    <i class="bg-warning"></i>
+                    <span class="status">{{ estudiante.estado_actual.nombre }}</span>
+                  </span>
+                </td>
+                <td>
+                  <a href="{% url 'estudiante-detail' estudiante.pk %}" class="btn btn-sm btn-neutral">Ver Perfil</a>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="5" class="text-center">No hay estudiantes registrados.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="card-footer py-4">
+          {% if is_paginated %}
+          <nav aria-label="Paginación">
+            <ul class="pagination justify-content-center mb-0" style="flex-wrap: nowrap;">
+
+              <!-- Botón: Primera Página -->
+              {% if page_obj.has_previous %}
+              <li class="page-item">
+                <a class="page-link"
+                  href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}{% if request.GET.carrera %}&carrera={{ request.GET.carrera }}{% endif %}"
+                  tabindex="-1">
+                  <i class="fas fa-angle-double-left"></i>
+                  <span class="sr-only">Primera</span>
+                </a>
+              </li>
+              {% else %}
+              <li class="page-item disabled">
+                <a class="page-link" href="#" tabindex="-1">
+                  <i class="fas fa-angle-double-left"></i>
+                  <span class="sr-only">Primera</span>
+                </a>
+              </li>
+              {% endif %}
+
+              <!-- Botón: Página Anterior -->
+              {% if page_obj.has_previous %}
+              <li class="page-item">
+                <a class="page-link"
+                  href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}{% if request.GET.carrera %}&carrera={{ request.GET.carrera }}{% endif %}"
+                  tabindex="-1">
+                  <i class="fas fa-angle-left"></i>
+                  <span class="sr-only">Anterior</span>
+                </a>
+              </li>
+              {% else %}
+              <li class="page-item disabled">
+                <a class="page-link" href="#" tabindex="-1">
+                  <i class="fas fa-angle-left"></i>
+                  <span class="sr-only">Anterior</span>
+                </a>
+              </li>
+              {% endif %}
+
+              <!-- Indicador de Página Actual -->
+              <li class="page-item disabled" style="margin: 0 10px;">
+                  <span class="page-link" style="background-color: transparent; border: none; color: #8898aa; white-space: nowrap; min-width: 120px; text-align: center; padding: 0.5rem 1rem;">
+                      Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                  </span>
+              </li>
+
+              <!-- Botón: Página Siguiente -->
+              {% if page_obj.has_next %}
+              <li class="page-item">
+                <a class="page-link"
+                  href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}{% if request.GET.carrera %}&carrera={{ request.GET.carrera }}{% endif %}">
+                  <i class="fas fa-angle-right"></i>
+                  <span class="sr-only">Siguiente</span>
+                </a>
+              </li>
+              {% else %}
+              <li class="page-item disabled">
+                <a class="page-link" href="#">
+                  <i class="fas fa-angle-right"></i>
+                  <span class="sr-only">Siguiente</span>
+                </a>
+              </li>
+              {% endif %}
+
+              <!-- Botón: Última Página -->
+              {% if page_obj.has_next %}
+              <li class="page-item">
+                <a class="page-link"
+                  href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.estado %}&estado={{ request.GET.estado }}{% endif %}{% if request.GET.carrera %}&carrera={{ request.GET.carrera }}{% endif %}">
+                  <i class="fas fa-angle-double-right"></i>
+                  <span class="sr-only">Última</span>
+                </a>
+              </li>
+              {% else %}
+              <li class="page-item disabled">
+                <a class="page-link" href="#">
+                  <i class="fas fa-angle-double-right"></i>
+                  <span class="sr-only">Última</span>
+                </a>
+              </li>
+              {% endif %}
+
+            </ul>
+          </nav>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% include "includes/footer.html" %}
 
 </div>
 

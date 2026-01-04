@@ -146,6 +146,74 @@
               <a href="{% url 'estudiante-list' %}" class="btn btn-sm btn-primary">Ver todos</a>
             </div>
           </div>
+
+          <!-- FORMULARIO DE FILTROS -->
+          <div class="row mt-3">
+            <div class="col-12">
+              <form method="GET" action="">
+                <div class="row">
+
+                  <!-- Filtro por Carrera -->
+                  <div class="col-md-3">
+                    <div class="form-group mb-0">
+                      <small class="form-text text-muted mb-1">Carrera:</small>
+                      <select class="form-control form-control-sm" name="carrera_dashboard">
+                        <option value="">Todas las Carreras</option>
+                        {% for carrera in lista_carreras_dashboard %}
+                        <option value="{{ carrera.id_carrera }}" {% if request.GET.carrera_dashboard|add:"0" == carrera.id_carrera %} selected{% endif %}>
+                          {{ carrera.nombre }}
+                        </option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- Filtro Fecha Desde -->
+                  <div class="col-md-2">
+                    <div class="form-group mb-0">
+                      <small class="form-text text-muted mb-1">Desde:</small>
+                      <input type="date" class="form-control form-control-sm" name="fecha_desde"
+                        value="{{ request.GET.fecha_desde }}">
+                    </div>
+                  </div>
+
+                  <!-- Filtro Fecha Hasta -->
+                  <div class="col-md-2">
+                    <div class="form-group mb-0">
+                      <small class="form-text text-muted mb-1">Hasta:</small>
+                      <input type="date" class="form-control form-control-sm" name="fecha_hasta"
+                        value="{{ request.GET.fecha_hasta }}">
+                    </div>
+                  </div>
+
+                  <!-- Filtro por Tipo de Alerta -->
+                  <div class="col-md-3">
+                    <div class="form-group mb-0">
+                      <small class="form-text text-muted mb-1">Tipo de Alerta:</small>
+                      <select class="form-control form-control-sm" name="tipo_alerta">
+                        <option value="">Todas las Alertas</option>
+                        {% for tipo in lista_alertas %}
+                        <option value="{{ tipo.id_tipo }}" {% if request.GET.tipo_alerta|add:"0" == tipo.id_tipo %} selected{% endif %}>
+                          {{ tipo.nombre }}
+                        </option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- Botones -->
+                  <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary btn-sm btn-block">Filtrar</button>
+                    {% if request.GET %}
+                    <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-sm btn-block mt-1"
+                      style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">Limpiar</a>
+                    {% endif %}
+                  </div>
+
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
         <div class="table-responsive">
           <table class="table align-items-center table-flush">

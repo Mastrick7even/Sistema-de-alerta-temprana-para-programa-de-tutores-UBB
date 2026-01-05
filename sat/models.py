@@ -32,7 +32,7 @@ class Asistencia(models.Model):
 
     tutoria = models.ForeignKey(
         'Tutoria', 
-        models.PROTECT,  # No borrar una tutoría si tiene registros de asistencia asociados
+        models.CASCADE,  # Si se borra la tutoría, se borran automáticamente sus asistencias
         db_column='id_tutoria'
     )
 
@@ -98,6 +98,9 @@ class ClasificacionTutoria(models.Model):
         db_table = 'clasificacion_tutoria'
         verbose_name = 'Clasificación de tutoría'
         verbose_name_plural = 'Clasificaciones de tutoría'
+
+    def __str__(self):
+        return self.nombre
 
 
 class Estado(models.Model):
@@ -226,6 +229,9 @@ class TipoTutoria(models.Model):
         db_table = 'tipo_tutoria'
         verbose_name = 'Tipo de tutoría'
         verbose_name_plural = 'Tipos de tutoría'
+
+    def __str__(self):
+        return self.nombre
         
 
 

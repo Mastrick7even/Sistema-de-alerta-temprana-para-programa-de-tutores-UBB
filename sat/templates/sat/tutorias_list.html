@@ -1,0 +1,120 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<div class="header bg-primary pb-6">
+    <div class="container-fluid">
+        <div class="header-body">
+            <div class="row align-items-center py-4">
+                <div class="col-lg-6 col-7">
+                    <h6 class="h2 text-white d-inline-block mb-0">Mis Tutorías Realizadas</h6>
+                </div>
+                <div class="col-lg-6 col-5 text-right">
+                    <a href="{% url 'crear-tutoria' %}" class="btn btn-sm btn-neutral">
+                        <i class="fas fa-plus"></i> Nueva Tutoría
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid mt--6">
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header border-0">
+                    <h3 class="mb-0">Historial</h3>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-items-center table-flush">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Tema / Actividad</th>
+                                <th>Tipo</th>
+                                <th>Lugar</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for t in tutorias %}
+                            <tr>
+                                <td>{{ t.fecha|date:"d/m/Y H:i" }}</td>
+                                <td><b>{{ t.tema_tutoria }}</b></td>
+                                <td><span class="badge badge-dot"><i class="bg-info"></i> {{ t.tipo_tutoria.nombre}}</span></td>
+                                <td>{{ t.lugar }}</td>
+                                <td>
+                                    <a href="{% url 'tutoria-update' t.pk %}"
+                                        class="btn btn-sm btn-icon-only text-primary" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+
+                                    <button type="button" class="btn btn-sm btn-icon-only text-danger" title="Eliminar"
+                                        data-toggle="modal" data-target="#modal-delete-tutoria"
+                                        data-url="{% url 'tutoria-delete' t.pk %}"
+                                        onclick="setDeleteUrl(this.getAttribute('data-url'))">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+
+                                    <a href="{% url 'tomar-asistencia' t.pk %}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-clipboard-check"></i> Asistencia
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4">
+                                    <span class="text-muted">No has registrado tutorías aún.</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% include "includes/footer.html" %}
+</div>
+
+<!-- Modal de confirmación para eliminar tutoría -->
+<div class="modal fade" id="modal-delete-tutoria" tabindex="-1" role="dialog" aria-labelledby="modal-delete-tutoria"
+    aria-hidden="true">
+    <div class="modal-dialog modal-danger modal-dialog-centered modal-" role="document">
+        <div class="modal-content bg-gradient-danger">
+
+            <div class="modal-header">
+                <h6 class="modal-title" id="modal-title-notification">¡Atención!</h6>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div class="py-3 text-center">
+                    <i class="ni ni-bell-55 ni-3x"></i>
+                    <h4 class="heading mt-4">¿Estás seguro de eliminar esta tutoría?</h4>
+                    <p>Esta acción borrará permanentemente la tutoría de la base de datos. No se puede deshacer.</p>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <form id="delete-form" method="post" action="">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-white">Sí, Eliminar</button>
+                </form>
+                <button type="button" class="btn btn-link text-white ml-auto" data-dismiss="modal">Cancelar</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    function setDeleteUrl(url) {
+        // Asigna la URL de eliminación al formulario del modal
+        document.getElementById('delete-form').action = url;
+    }
+</script>
+
+{% endblock %}

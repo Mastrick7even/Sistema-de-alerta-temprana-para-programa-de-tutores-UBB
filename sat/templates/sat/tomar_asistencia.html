@@ -1,0 +1,81 @@
+{% extends 'layouts/base.html' %}
+{% load sat_extras %}
+
+{% block content %}
+<div class="header bg-primary pb-6">
+    <div class="container-fluid">
+        <div class="header-body">
+            <div class="row align-items-center py-4">
+                <div class="col-lg-6 col-7">
+                    <h6 class="h2 text-white d-inline-block mb-0">Pasar Lista</h6>
+                    <p class="text-white mb-0">Tutoría: {{ tutoria.tema_tutoria }} ({{ tutoria.fecha|date:"d/m/Y H:i"}})</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid mt--6">
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header border-0">
+                    <h3 class="mb-0">Listado de Estudiantes</h3>
+                </div>
+
+                <form method="POST">
+                    {% csrf_token %}
+                    <div class="table-responsive">
+                        <table class="table align-items-center table-flush">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Estudiante</th>
+                                    <th>RUT</th>
+                                    <th>Estado Asistencia</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for est in estudiantes %}
+                                <tr>
+                                    <td>{{ est.nombre }} {{ est.apellido }}</td>
+                                    <td>{{ est.rut }}</td>
+                                    <td>
+                                        {% with estado_actual=mapa_asistencia|get_item:est.id_estudiante %}
+
+                                        <div class="btn-group btn-group-toggle" data-toggle="buttons">
+                                            <label
+                                                class="btn btn-sm btn-outline-success {% if estado_actual == 'Presente' %}active{% endif %}">
+                                                <input type="radio" name="asistencia_{{ est.id_estudiante }}"
+                                                    value="Presente" {% if estado_actual == 'Presente' %}checked{% endif %} required> Presente
+                                            </label>
+                                            <label
+                                                class="btn btn-sm btn-outline-warning {% if estado_actual == 'Justificado' %}active{% endif %}">
+                                                <input type="radio" name="asistencia_{{ est.id_estudiante }}"
+                                                    value="Justificado" {% if estado_actual == 'Justificado' %}checked{% endif %}> Justif.
+                                            </label>
+                                            <label
+                                                class="btn btn-sm btn-outline-danger {% if estado_actual == 'Ausente' %}active{% endif %}">
+                                                <input type="radio" name="asistencia_{{ est.id_estudiante }}"
+                                                    value="Ausente" {% if estado_actual == 'Ausente' %}checked{% endif %} required> Ausente
+                                            </label>
+                                        </div>
+
+                                        {% endwith %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="card-footer py-4 text-right">
+                        <a href="{% url 'mis-tutorias' %}" class="btn btn-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-primary">Guardar Asistencia</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% include "includes/footer.html" %}
+</div>
+{% endblock %}

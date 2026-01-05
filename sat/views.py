@@ -1,15 +1,15 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin # Obliga a estar logueado
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
-from .models import Estudiante, Usuario, Bitacora, Estado, Carrera, TipoAlarma
-from django.shortcuts import get_object_or_404
-from .forms import BitacoraForm
 from django.urls import reverse_lazy
 from django.db.models import Count, Q
 from django.template.loader import render_to_string
 from django.http import HttpResponse
 from django.conf import settings
+from django.contrib import messages
 import os
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
+from .models import Estudiante, Usuario, Bitacora, Estado, Carrera, TipoAlarma, Tutoria, Asistencia
+from .forms import BitacoraForm, TutoriaForm
 
 class EstudianteListView(LoginRequiredMixin, ListView):
     model = Estudiante
@@ -316,3 +316,93 @@ class ReporteEstudiantePDF(LoginRequiredMixin, DetailView):
         filename = f"Ficha_{estudiante.rut}.pdf"
         response['Content-Disposition'] = f'inline; filename="{filename}"'
         return response
+    
+# 1. LISTAR MIS TUTORÍAS
+class MisTutoriasView(LoginRequiredMixin, ListView):
+    model = Tutoria
+    template_name = 'sat/tutorias_list.html'
+    context_object_name = 'tutorias'
+
+    def get_queryset(self):
+        # Solo veo las tutorías que YO creé
+        try:
+            perfil = Usuario.objects.get(email=self.request.user.email)
+            return Tutoria.objects.filter(tutor=perfil).order_by('-fecha')
+        except Usuario.DoesNotExist:
+            return Tutoria.objects.none()
+
+# 2. CREAR NUEVA TUTORÍA
+class TutoriaCreateView(LoginRequiredMixin, CreateView):
+    model = Tutoria
+    form_class = TutoriaForm
+    template_name = 'sat/tutoria_form.html'
+    success_url = '/tutorias/' # Ajusta a tu URL de lista
+
+    def form_valid(self, form):
+        # Asignar automáticamente el tutor actual
+        perfil = Usuario.objects.get(email=self.request.user.email)
+        form.instance.tutor = perfil
+        return super().form_valid(form)
+
+# 3. EDITAR TUTORÍA
+class TutoriaUpdateView(LoginRequiredMixin, UpdateView):
+    model = Tutoria
+    form_class = TutoriaForm
+    template_name = 'sat/tutoria_form.html'
+    success_url = '/tutorias/'
+    
+    def get_queryset(self):
+        # Solo permitir editar las tutorías propias
+        perfil = Usuario.objects.get(email=self.request.user.email)
+        return Tutoria.objects.filter(tutor=perfil)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['titulo'] = 'Editar Tutoría'
+        return context
+
+# 4. ELIMINAR TUTORÍA
+class TutoriaDeleteView(LoginRequiredMixin, DeleteView):
+    model = Tutoria
+    success_url = '/tutorias/'
+    
+    def get_queryset(self):
+        # Solo permitir eliminar las tutorías propias
+        perfil = Usuario.objects.get(email=self.request.user.email)
+        return Tutoria.objects.filter(tutor=perfil)
+
+# 3. TOMAR ASISTENCIA (La lógica interesante)
+def tomar_asistencia(request, pk):
+    # pk es el ID de la tutoría
+    tutoria = get_object_or_404(Tutoria, pk=pk)
+    
+    # Obtenemos SOLO los estudiantes asignados a este tutor
+    mis_estudiantes = Estudiante.objects.filter(tutor_asignado=tutoria.tutor)
+
+    if request.method == 'POST':
+        # Procesar el formulario manual
+        for estudiante in mis_estudiantes:
+            # En el HTML pondremos inputs con nombre "asistencia_IDESTUDIANTE"
+            estado = request.POST.get(f'asistencia_{estudiante.id_estudiante}')
+            
+            # Guardamos o actualizamos
+            # update_or_create busca por (tutoria, estudiante) y actualiza el estado
+            Asistencia.objects.update_or_create(
+                tutoria=tutoria,
+                estudiante=estudiante,
+                defaults={'estado_asistencia': estado}
+            )
+        
+        messages.success(request, 'Asistencia registrada correctamente.')
+        return redirect('mis-tutorias') # Volver al listado
+
+    # Si es GET, preparamos datos previos si existen
+    asistencias_previas = Asistencia.objects.filter(tutoria=tutoria)
+    # Creamos un diccionario { id_estudiante: estado } para pintar el HTML
+    mapa_asistencia = {a.estudiante.id_estudiante: a.estado_asistencia for a in asistencias_previas}
+
+    return render(request, 'sat/tomar_asistencia.html', {
+        'tutoria': tutoria,
+        'estudiantes': mis_estudiantes,
+        'mapa_asistencia': mapa_asistencia
+    })

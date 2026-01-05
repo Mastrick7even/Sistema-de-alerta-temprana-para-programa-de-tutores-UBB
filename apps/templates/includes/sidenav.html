@@ -23,6 +23,28 @@
               <i class="ni ni-hat-3 text-orange"></i> <span class="nav-link-text">Mis Estudiantes</span>
             </a>
           </li>
+
+          <!-- Sección de Tutorías (Solo para Tutores) -->
+          {% load sat_extras %}
+          {% if request.user.is_authenticated %}
+          {% with perfil=request.user.email|get_perfil %}
+          {% if perfil and perfil.rol.nombre == 'Tutor' %}
+          <li class="nav-item">
+            <hr class="my-3">
+            <h6 class="navbar-heading p-0 text-muted">
+              <span class="docs-normal">Gestión Académica</span>
+            </h6>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if 'tutorias' in request.path %}active{% endif %}" href="{% url 'mis-tutorias' %}">
+              <i class="ni ni-book-bookmark text-blue"></i>
+              <span class="nav-link-text">Mis Tutorías</span>
+            </a>
+          </li>
+          {% endif %}
+          {% endwith %}
+          {% endif %}
+
           <!-- <li class="nav-item">
             <a class="nav-link {% if 'icons' in segment %} active {% endif %}" href="/icons.html">
               <i class="ni ni-planet text-orange"></i>

@@ -20,12 +20,19 @@ Perfil de {{ estudiante.nombre }}
     <span class="mask bg-gradient-default opacity-8"></span>
 
     <div class="container-fluid d-flex align-items-center">
-        <div class="row">
-            <div class="col-lg-12 col-md-10">
+        <div class="row w-100">
+            <div class="col-lg-6 col-7">
                 <h1 class="display-2 text-white mt-4">{{ estudiante.nombre }} {{ estudiante.apellido }}</h1>
                 <p class="text-white mt-0 mb-4">Este es el perfil detallado del estudiante. Aquí puedes revisar su
                     historial académico, sus alertas y registrar nuevas observaciones en la bitácora.</p>
-                <a href="{% url 'estudiante-list' %}" class="btn btn-neutral mb-3">Volver al listado</a>
+            </div>
+            <div class="col-lg-6 col-5 text-right">
+                <a href="{% url 'estudiante-list' %}" class="btn btn-neutral mb-3 mr-2">
+                    <i class="fas fa-arrow-left"></i> Volver
+                </a>
+                <a href="{% url 'estudiante-pdf' object.pk %}" target="_blank" class="btn btn-neutral text-danger mb-3">
+                    <i class="fas fa-file-pdf"></i> Descargar Ficha
+                </a>
             </div>
         </div>
     </div>
@@ -39,7 +46,8 @@ Perfil de {{ estudiante.nombre }}
                     <div class="col-lg-3 order-lg-2">
                         <div class="card-profile-image">
                             <a href="#">
-                                <img src="{% static 'assets/img/theme/img-perfil-detallado.jpg' %}" class="rounded-circle">
+                                <img src="{% static 'assets/img/theme/img-perfil-detallado.jpg' %}"
+                                    class="rounded-circle">
                             </a>
                         </div>
                     </div>

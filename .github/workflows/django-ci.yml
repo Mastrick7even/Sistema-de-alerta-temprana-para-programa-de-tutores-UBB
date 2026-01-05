@@ -21,6 +21,11 @@ jobs: # Que hará
       with:
         python-version: ${{ matrix.python-version }}
     
+    - name: Install Dependencies for PDF generation
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libcairo2-dev pkg-config python3-dev
+    
     - name: Install Dependencies # Instala dependencias
       run: |
         python -m pip install --upgrade pip

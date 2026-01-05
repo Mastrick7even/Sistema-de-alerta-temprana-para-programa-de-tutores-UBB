@@ -6,10 +6,6 @@ from django.shortcuts import get_object_or_404
 from .forms import BitacoraForm
 from django.urls import reverse_lazy
 from django.db.models import Count, Q
-from django.template.loader import render_to_string
-from django.http import HttpResponse
-from django.conf import settings
-import os
 
 class EstudianteListView(LoginRequiredMixin, ListView):
     model = Estudiante
@@ -260,59 +256,3 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         
         return context
 
-# Reporte PDF
-class ReporteEstudiantePDF(LoginRequiredMixin, DetailView):
-    model = Estudiante
-    
-    def get(self, request, *args, **kwargs):
-        estudiante = self.get_object()
-        
-        # Obtenemos las bitácoras ordenadas
-        bitacoras = Bitacora.objects.filter(estudiante=estudiante).order_by('-fecha_registro')
-        
-        # Contexto para el template
-        context = {
-            'estudiante': estudiante,
-            'bitacoras': bitacoras,
-            'usuario_generador': request.user,
-        }
-        
-        # 1. Renderizar HTML a string
-        html_string = render_to_string('sat/reporte_pdf.html', context)
-        
-        # 2. Intentar generar PDF con WeasyPrint (mejor calidad, requiere GTK+ en Windows)
-        try:
-            from weasyprint import HTML, CSS
-            html = HTML(string=html_string, base_url=request.build_absolute_uri())
-            pdf_file = html.write_pdf()
-            
-        except (ImportError, OSError) as e:
-            # Fallback: usar xhtml2pdf (funciona en Windows sin dependencias externas)
-            try:
-                from xhtml2pdf import pisa
-                from io import BytesIO
-                
-                pdf_buffer = BytesIO()
-                pisa_status = pisa.CreatePDF(html_string, dest=pdf_buffer)
-                
-                if pisa_status.err:
-                    return HttpResponse(
-                        f"Error al generar PDF: {pisa_status.err}",
-                        status=500
-                    )
-                
-                pdf_file = pdf_buffer.getvalue()
-                pdf_buffer.close()
-                
-            except ImportError:
-                return HttpResponse(
-                    "Error: No hay librerías PDF instaladas. "
-                    "Instala 'weasyprint' (con GTK+) o 'xhtml2pdf' (pip install xhtml2pdf).",
-                    status=500
-                )
-        
-        # 3. Respuesta HTTP con el PDF
-        response = HttpResponse(pdf_file, content_type='application/pdf')
-        filename = f"Ficha_{estudiante.rut}.pdf"
-        response['Content-Disposition'] = f'inline; filename="{filename}"'
-        return response

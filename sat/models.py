@@ -66,6 +66,15 @@ class Bitacora(models.Model):
         null=True
     )
 
+    autor = models.ForeignKey(
+        'Usuario',
+        models.PROTECT,
+        db_column='id_autor',
+        null=True,
+        blank=True,
+        related_name='bitacoras_creadas'
+    )
+
     class Meta:
         db_table = 'bitacora'
 
@@ -292,3 +301,19 @@ class Usuario(models.Model):
 
     def __str__(self):
         return f"{self.nombre} {self.apellido} ({self.rut})"
+
+class Notificacion(models.Model):
+    destinatario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='notificaciones_recibidas')
+    actor = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='notificaciones_enviadas', null=True)
+    mensaje = models.CharField(max_length=255)
+    leida = models.BooleanField(default=False)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    
+    # Opcional: Para saber a qué estudiante se refiere y poder hacer click para ir a verlo
+    estudiante_relacionado = models.ForeignKey('Estudiante', on_delete=models.CASCADE, null=True, blank=True)
+
+    class Meta:
+        ordering = ['-fecha_creacion']
+
+    def __str__(self):
+        return f"Para {self.destinatario}: {self.mensaje}"

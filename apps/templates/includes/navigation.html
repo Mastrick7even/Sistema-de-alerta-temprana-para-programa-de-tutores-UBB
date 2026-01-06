@@ -11,7 +11,8 @@
             <input class="form-control" placeholder="Search" type="text">
           </div>
         </div>
-        <button type="button" class="close" data-action="search-close" data-target="#navbar-search-main" aria-label="Close">
+        <button type="button" class="close" data-action="search-close" data-target="#navbar-search-main"
+          aria-label="Close">
           <span aria-hidden="true">×</span>
         </button>
       </form>
@@ -35,112 +36,55 @@
         <li class="nav-item dropdown">
           <a class="nav-link" href="#" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <i class="ni ni-bell-55"></i>
+            {% if conteo_notificaciones > 0 %}
+            <span class="badge badge-circle badge-floating badge-danger border-white"
+              style="position: absolute; top: 0; right: 0; transform: scale(0.7);">
+              {{ conteo_notificaciones }}
+            </span>
+            {% endif %}
           </a>
-          <div class="dropdown-menu dropdown-menu-xl  dropdown-menu-right  py-0 overflow-hidden">
-            <!-- Dropdown header -->
+          <div class="dropdown-menu dropdown-menu-xl dropdown-menu-right py-0 overflow-hidden">
             <div class="px-3 py-3">
-              <h6 class="text-sm text-muted m-0">You have <strong class="text-primary">13</strong> notifications.</h6>
+              <h6 class="text-sm text-muted m-0">Tienes <strong class="text-primary">{{ conteo_notificaciones }}</strong> notificaciones nuevas.</h6>
             </div>
-            <!-- List group -->
+
             <div class="list-group list-group-flush">
-              <a href="#!" class="list-group-item list-group-item-action">
+              {% for noti in mis_notificaciones %}
+              <a href="{% url 'leer-notificacion' noti.id %}" class="list-group-item list-group-item-action">
                 <div class="row align-items-center">
                   <div class="col-auto">
-                    <!-- Avatar -->
-                    <img alt="Image placeholder" src="/static/assets/img/theme/team-1.jpg" class="avatar rounded-circle">
+                    <div class="avatar rounded-circle bg-gradient-primary">
+                      <i class="ni ni-single-02"></i>
+                    </div>
                   </div>
                   <div class="col ml--2">
-                    <div class="d-flex justify-content-between align-items-center">
-                      <div>
-                        <h4 class="mb-0 text-sm">John Snow</h4>
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                      <div class="flex-grow-1">
+                        <h4 class="mb-0 text-sm font-weight-600">{{ noti.actor.get_full_name }}</h4>
+                        {% if noti.estudiante_relacionado %}
+                        <small class="text-muted">
+                          <i class="ni ni-badge"></i> {{ noti.estudiante_relacionado.nombre }} {{noti.estudiante_relacionado.apellido }}
+                        </small>
+                        {% endif %}
                       </div>
-                      <div class="text-right text-muted">
-                        <small>2 hrs ago</small>
+                      <div class="text-right text-muted ml-2">
+                        <small>{{ noti.fecha_creacion|timesince }}</small>
                       </div>
                     </div>
-                    <p class="text-sm mb-0">Let's meet at Starbucks at 11:30. Wdyt?</p>
+                    <p class="text-sm mb-0 text-darker" style="line-height: 1.4;">{{ noti.mensaje|truncatechars:80 }}
+                    </p>
                   </div>
                 </div>
               </a>
-              <a href="#!" class="list-group-item list-group-item-action">
-                <div class="row align-items-center">
-                  <div class="col-auto">
-                    <!-- Avatar -->
-                    <img alt="Image placeholder" src="/static/assets/img/theme/team-2.jpg" class="avatar rounded-circle">
-                  </div>
-                  <div class="col ml--2">
-                    <div class="d-flex justify-content-between align-items-center">
-                      <div>
-                        <h4 class="mb-0 text-sm">John Snow</h4>
-                      </div>
-                      <div class="text-right text-muted">
-                        <small>3 hrs ago</small>
-                      </div>
-                    </div>
-                    <p class="text-sm mb-0">A new issue has been reported for Argon.</p>
-                  </div>
-                </div>
-              </a>
-              <a href="#!" class="list-group-item list-group-item-action">
-                <div class="row align-items-center">
-                  <div class="col-auto">
-                    <!-- Avatar -->
-                    <img alt="Image placeholder" src="/static/assets/img/theme/team-3.jpg" class="avatar rounded-circle">
-                  </div>
-                  <div class="col ml--2">
-                    <div class="d-flex justify-content-between align-items-center">
-                      <div>
-                        <h4 class="mb-0 text-sm">John Snow</h4>
-                      </div>
-                      <div class="text-right text-muted">
-                        <small>5 hrs ago</small>
-                      </div>
-                    </div>
-                    <p class="text-sm mb-0">Your posts have been liked a lot.</p>
-                  </div>
-                </div>
-              </a>
-              <a href="#!" class="list-group-item list-group-item-action">
-                <div class="row align-items-center">
-                  <div class="col-auto">
-                    <!-- Avatar -->
-                    <img alt="Image placeholder" src="/static/assets/img/theme/team-4.jpg" class="avatar rounded-circle">
-                  </div>
-                  <div class="col ml--2">
-                    <div class="d-flex justify-content-between align-items-center">
-                      <div>
-                        <h4 class="mb-0 text-sm">John Snow</h4>
-                      </div>
-                      <div class="text-right text-muted">
-                        <small>2 hrs ago</small>
-                      </div>
-                    </div>
-                    <p class="text-sm mb-0">Let's meet at Starbucks at 11:30. Wdyt?</p>
-                  </div>
-                </div>
-              </a>
-              <a href="#!" class="list-group-item list-group-item-action">
-                <div class="row align-items-center">
-                  <div class="col-auto">
-                    <!-- Avatar -->
-                    <img alt="Image placeholder" src="/static/assets/img/theme/team-5.jpg" class="avatar rounded-circle">
-                  </div>
-                  <div class="col ml--2">
-                    <div class="d-flex justify-content-between align-items-center">
-                      <div>
-                        <h4 class="mb-0 text-sm">John Snow</h4>
-                      </div>
-                      <div class="text-right text-muted">
-                        <small>3 hrs ago</small>
-                      </div>
-                    </div>
-                    <p class="text-sm mb-0">A new issue has been reported for Argon.</p>
-                  </div>
-                </div>
-              </a>
+              {% empty %}
+              <div class="text-center py-3">
+                <small class="text-muted">No hay novedades por ahora.</small>
+              </div>
+              {% endfor %}
             </div>
-            <!-- View all -->
-            <a href="#!" class="dropdown-item text-center text-primary font-weight-bold py-3">View all</a>
+
+            <a href="{% url 'todas-notificaciones' %}"
+              class="dropdown-item text-center text-primary font-weight-bold py-3">Ver todas</a>
           </div>
         </li>
         <li class="nav-item dropdown">
@@ -191,7 +135,8 @@
       </ul>
       <ul class="navbar-nav align-items-center  ml-auto ml-md-0 ">
         <li class="nav-item dropdown">
-          <a class="nav-link pr-0" href="#" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <a class="nav-link pr-0" href="#" role="button" data-toggle="dropdown" aria-haspopup="true"
+            aria-expanded="false">
             <div class="media align-items-center">
               <span class="avatar avatar-sm rounded-circle">
                 <img alt="Image placeholder" src="/static/assets/img/theme/team-4.jpg">

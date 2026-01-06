@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin # Obliga a estar logueado
+from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
 from django.db.models import Count, Q
 from django.template.loader import render_to_string
@@ -8,7 +9,7 @@ from django.conf import settings
 from django.contrib import messages
 import os
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
-from .models import Estudiante, Usuario, Bitacora, Estado, Carrera, TipoAlarma, Tutoria, Asistencia
+from .models import Estudiante, Usuario, Bitacora, Estado, Carrera, TipoAlarma, Tutoria, Asistencia, Notificacion
 from .forms import BitacoraForm, TutoriaForm
 
 class EstudianteListView(LoginRequiredMixin, ListView):
@@ -113,6 +114,11 @@ class BitacoraCreateView(LoginRequiredMixin, CreateView):
         le asignamos el estudiante automáticamente.
         """
         form.instance.estudiante = self.estudiante
+        try:
+            perfil = Usuario.objects.get(email=self.request.user.email)
+            form.instance.autor = perfil
+        except Usuario.DoesNotExist:
+            pass
         return super().form_valid(form)
 
     def get_success_url(self):
@@ -406,3 +412,76 @@ def tomar_asistencia(request, pk):
         'estudiantes': mis_estudiantes,
         'mapa_asistencia': mapa_asistencia
     })
+
+@login_required
+def leer_notificacion(request, pk):
+    noti = get_object_or_404(Notificacion, pk=pk)
+    
+    # Seguridad: Solo el dueño puede leerla
+    try:
+        perfil_usuario = Usuario.objects.get(email=request.user.email)
+        if noti.destinatario == perfil_usuario:
+            noti.leida = True
+            noti.save()
+    except Usuario.DoesNotExist:
+        pass  # Si no tiene perfil SAT, no puede marcar como leída
+        
+    # Redirigir al estudiante relacionado si existe
+    if noti.estudiante_relacionado:
+        return redirect('estudiante-detail', pk=noti.estudiante_relacionado.id_estudiante)
+    
+    # Si no, al dashboard
+    return redirect('home')
+
+# views.py
+@login_required
+def todas_notificaciones(request):
+    try:
+        from django.core.paginator import Paginator
+        
+        perfil = Usuario.objects.get(email=request.user.email)
+        notificaciones_list = Notificacion.objects.filter(destinatario=perfil).order_by('-fecha_creacion')
+        
+        # Paginación: 10 notificaciones por página
+        paginator = Paginator(notificaciones_list, 10)
+        page_number = request.GET.get('page')
+        notificaciones = paginator.get_page(page_number)
+        
+        return render(request, 'sat/notificaciones.html', {
+            'notificaciones': notificaciones,
+            'total_notificaciones': notificaciones_list.count()
+        })
+    except Usuario.DoesNotExist:
+        return redirect('home')
+
+@login_required
+def marcar_notificaciones_leidas(request):
+    """Marca múltiples notificaciones como leídas"""
+    if request.method == 'POST':
+        notificacion_ids = request.POST.getlist('notificaciones[]')
+        try:
+            perfil = Usuario.objects.get(email=request.user.email)
+            Notificacion.objects.filter(
+                id__in=notificacion_ids,
+                destinatario=perfil
+            ).update(leida=True)
+            messages.success(request, f'{len(notificacion_ids)} notificación(es) marcada(s) como leída(s).')
+        except Usuario.DoesNotExist:
+            messages.error(request, 'Error al procesar la solicitud.')
+    return redirect('todas-notificaciones')
+
+@login_required
+def eliminar_notificaciones(request):
+    """Elimina múltiples notificaciones"""
+    if request.method == 'POST':
+        notificacion_ids = request.POST.getlist('notificaciones[]')
+        try:
+            perfil = Usuario.objects.get(email=request.user.email)
+            count = Notificacion.objects.filter(
+                id__in=notificacion_ids,
+                destinatario=perfil
+            ).delete()[0]
+            messages.success(request, f'{count} notificación(es) eliminada(s).')
+        except Usuario.DoesNotExist:
+            messages.error(request, 'Error al procesar la solicitud.')
+    return redirect('todas-notificaciones')

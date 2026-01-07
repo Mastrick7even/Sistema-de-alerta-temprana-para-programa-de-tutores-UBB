@@ -301,6 +301,10 @@ class Usuario(models.Model):
 
     def __str__(self):
         return f"{self.nombre} {self.apellido} ({self.rut})"
+    
+    def get_full_name(self):
+        """Retorna el nombre completo del usuario"""
+        return f"{self.nombre} {self.apellido}"
 
 class Notificacion(models.Model):
     destinatario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='notificaciones_recibidas')

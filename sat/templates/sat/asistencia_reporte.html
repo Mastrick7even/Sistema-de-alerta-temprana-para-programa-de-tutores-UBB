@@ -1,0 +1,109 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<div class="header bg-primary pb-6">
+    <div class="container-fluid">
+        <div class="header-body">
+            <div class="row align-items-center py-4">
+                <div class="col-lg-6 col-7">
+                    <h6 class="h2 text-white d-inline-block mb-0">Reporte de Asistencia</h6>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid mt--6">
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header border-0">
+
+                    <form method="GET">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <input type="text" name="q" class="form-control form-control-sm"
+                                    placeholder="Buscar alumno..." value="{{ request.GET.q }}">
+                            </div>
+
+                            {% if request.user.rol.nombre != 'Tutor' %}
+                            <div class="col-md-3">
+                                <select name="carrera" class="form-control form-control-sm">
+                                    <option value="">Todas las Carreras</option>
+                                    {% for c in carreras %}<option value="{{ c.id_carrera }}" {% if request.GET.carrera|add:"0" == c.id_carrera %}selected{% endif %}>{{ c.nombre }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select name="tutor" class="form-control form-control-sm">
+                                    <option value="">Todos los Tutores</option>
+                                    {% for t in tutores %}<option value="{{ t.id_usuario }}" {% if request.GET.tutor|add:"0" == t.id_usuario %}selected{% endif %}>{{ t.get_full_name }}
+                                    </option>{% endfor %}
+                                </select>
+                            </div>
+                            {% endif %}
+
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-sm btn-primary btn-block">Filtrar</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-items-center table-flush">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Estudiante</th>
+                                <th>Carrera</th>
+                                <th>Clases (P/T)</th>
+                                <th>% Asistencia</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for est in estudiantes_data %}
+                            <tr>
+                                <th scope="row">
+                                    <span class="mb-0 text-sm">{{ est.nombre }} {{ est.apellido }}</span>
+                                    <br><small class="text-muted">{{ est.rut }}</small>
+                                </th>
+                                <td>{{ est.carrera.nombre }}</td>
+                                <td>
+                                    {{ est.clases_presente }} / {{ est.total_clases }}
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% with total=est.total_clases|default:1 %}
+                                        {% widthratio est.clases_presente total 100 as porcentaje %}
+                                        <span class="mr-2">{{ porcentaje }}%</span>
+                                        <div>
+                                            <div class="progress">
+                                                <div class="progress-bar {% if porcentaje < 50 %}bg-danger{% elif porcentaje < 75 %}bg-warning{% else %}bg-success{% endif %}"
+                                                    role="progressbar" style="width: {{ porcentaje }}%;"></div>
+                                            </div>
+                                        </div>
+                                        {% endwith %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <a href="{% url 'asistencia-detalle' est.id_estudiante %}"
+                                        class="btn btn-sm btn-neutral">Ver
+                                        Historial</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center">No se encontraron registros.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    {% include "includes/footer.html" %}
+</div>
+{% endblock %}

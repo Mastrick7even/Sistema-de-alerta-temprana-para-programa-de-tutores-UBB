@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin # Obliga a estar logueado
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Case, When, IntegerField
 from django.template.loader import render_to_string
 from django.http import HttpResponse
 from django.conf import settings
@@ -485,3 +485,86 @@ def eliminar_notificaciones(request):
         except Usuario.DoesNotExist:
             messages.error(request, 'Error al procesar la solicitud.')
     return redirect('todas-notificaciones')
+
+
+class ReporteAsistenciaView(LoginRequiredMixin, ListView):
+    model = Estudiante
+    template_name = 'sat/asistencia_reporte.html'
+    context_object_name = 'estudiantes_data'
+    paginate_by = 15
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Estudiante.objects.all()
+
+        # 1. SEGURIDAD: Filtramos según el rol
+        if not user.is_superuser:
+            try:
+                perfil = Usuario.objects.get(email=user.email)
+                if perfil.rol.nombre == 'Tutor':
+                    queryset = queryset.filter(tutor_asignado=perfil)
+                # Si es Encargado, ve todo (o podrías filtrar por su carrera si quisieras)
+            except Usuario.DoesNotExist:
+                return Estudiante.objects.none()
+
+        # 2. FILTROS DEL USUARIO (Barra de búsqueda)
+        q = self.request.GET.get('q')
+        carrera = self.request.GET.get('carrera')
+        tutor = self.request.GET.get('tutor')
+
+        if q:
+            queryset = queryset.filter(Q(nombre__icontains=q) | Q(apellido__icontains=q) | Q(rut__icontains=q))
+        if carrera:
+            queryset = queryset.filter(carrera__id_carrera=carrera)
+        if tutor:
+            queryset = queryset.filter(tutor_asignado__id_usuario=tutor)
+
+        # 3. CÁLCULO DE PORCENTAJES (Annotate mágico de Django)
+        # Esto cuenta cuántas asistencias totales tiene y cuántas son "Presente"
+        queryset = queryset.annotate(
+            total_clases=Count('asistencia'),
+            clases_presente=Count(Case(
+                When(asistencia__estado_asistencia='Presente', then=1),
+                output_field=IntegerField()
+            ))
+        ).order_by('apellido')
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Pasamos datos para los filtros select
+        context['carreras'] = Carrera.objects.all()
+        
+        # Solo pasamos lista de tutores si el usuario es Encargado o superuser
+        es_tutor = False
+        if not self.request.user.is_superuser:
+            try:
+                perfil = Usuario.objects.get(email=self.request.user.email)
+                if perfil.rol.nombre == 'Tutor':
+                    es_tutor = True
+            except Usuario.DoesNotExist:
+                pass
+        
+        if not es_tutor:
+            context['tutores'] = Usuario.objects.filter(rol__nombre='Tutor')
+        
+        return context
+
+class DetalleAsistenciaEstudianteView(LoginRequiredMixin, DetailView):
+    model = Estudiante
+    template_name = 'sat/asistencia_estudiante_detail.html'
+    context_object_name = 'estudiante'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Obtenemos el historial de asistencias de este alumno
+        context['historial_asistencia'] = Asistencia.objects.filter(
+            estudiante=self.object
+        ).select_related('tutoria').order_by('-tutoria__fecha')
+        
+        # Calculamos stats simples para la cabecera
+        total = context['historial_asistencia'].count()
+        presentes = context['historial_asistencia'].filter(estado_asistencia='Presente').count()
+        context['porcentaje'] = (presentes / total * 100) if total > 0 else 0
+        return context

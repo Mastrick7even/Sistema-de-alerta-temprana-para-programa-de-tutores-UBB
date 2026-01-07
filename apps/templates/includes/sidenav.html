@@ -10,24 +10,41 @@
       <!-- Collapse -->
       <div class="collapse navbar-collapse" id="sidenav-collapse-main">
         <!-- Nav items -->
+        {% load sat_extras %}
         <ul class="navbar-nav">
+          {% if request.user.is_authenticated %}
+          {% with perfil=request.user.email|get_perfil %}
+
+          <!-- Dashboard / Home -->
           <li class="nav-item">
             <a class="nav-link {% if 'index' in segment %} active {% endif %}" href="/">
               <i class="ni ni-tv-2 text-primary"></i>
-              <span class="nav-link-text">Dashboard</span>
+              <span class="nav-link-text">
+                {% if perfil and perfil.rol.nombre == 'Tutor' %}
+                Home
+                {% else %}
+                Dashboard
+                {% endif %}
+              </span>
             </a>
           </li>
+
+          <!-- Estudiantes / Mis Estudiantes -->
           <li class="nav-item">
             <a class="nav-link {% if 'estudiantes' in request.path %}active{% endif %}"
               href="{% url 'estudiante-list' %}">
-              <i class="ni ni-hat-3 text-orange"></i> <span class="nav-link-text">Mis Estudiantes</span>
+              <i class="ni ni-hat-3 text-orange"></i>
+              <span class="nav-link-text">
+                {% if perfil and perfil.rol.nombre == 'Tutor' %}
+                Mis Estudiantes
+                {% else %}
+                Estudiantes
+                {% endif %}
+              </span>
             </a>
           </li>
 
           <!-- Sección de Tutorías (Solo para Tutores) -->
-          {% load sat_extras %}
-          {% if request.user.is_authenticated %}
-          {% with perfil=request.user.email|get_perfil %}
           {% if perfil and perfil.rol.nombre == 'Tutor' %}
           <li class="nav-item">
             <hr class="my-3">
@@ -42,10 +59,10 @@
             </a>
           </li>
           {% endif %}
-          {% endwith %}
-          {% endif %}
+
           <li class="nav-item">
-            <a class="nav-link {% if 'asistencia' in request.path %}active{% endif %}" href="{% url 'asistencia-reporte' %}">
+            <a class="nav-link {% if 'asistencia' in request.path %}active{% endif %}"
+              href="{% url 'asistencia-reporte' %}">
               <i class="ni ni-chart-bar-32 text-green"></i> <span class="nav-link-text">Reporte Asistencia</span>
             </a>
           </li>
@@ -62,12 +79,21 @@
               <span class="nav-link-text">Google</span>
             </a>
           </li> -->
-          <li class="nav-item">
+
+
+
+          <!-- PERFIL LO USAREMOS OTRO DIA -->
+          <!-- <li class="nav-item">
             <a class="nav-link {% if 'profile' in segment %} active {% endif %}" href="/profile.html">
               <i class="ni ni-single-02 text-yellow"></i>
               <span class="nav-link-text">Perfil</span>
             </a>
-          </li>
+          </li> -->
+
+
+
+
+
           <!-- <li class="nav-item">
             <a class="nav-link {% if 'tables' in segment %} active {% endif %}" href="/tables.html">
               <i class="ni ni-bullet-list-67 text-default"></i>
@@ -89,9 +115,12 @@
           <li class="nav-item">
             <a class="nav-link" href="{% url 'logout' %}">
               <i class="ni ni-user-run text-red"></i>
-              <span class="nav-link-text">Logout</span>
+              <span class="nav-link-text">Cerrar Sesión</span>
             </a>
           </li>
+
+          {% endwith %}
+          {% endif %}
         </ul>
         <!-- Divider -->
         <hr class="my-3">

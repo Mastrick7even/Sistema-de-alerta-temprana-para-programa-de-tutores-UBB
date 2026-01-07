@@ -1,5 +1,10 @@
 from django.urls import path
-from .views import EstudianteListView, EstudianteDetailView, BitacoraCreateView, BitacoraUpdateView, BitacoraDeleteView, DashboardView, ReporteEstudiantePDF, MisTutoriasView, tomar_asistencia, TutoriaCreateView, TutoriaUpdateView, TutoriaDeleteView, leer_notificacion, todas_notificaciones, marcar_notificaciones_leidas, eliminar_notificaciones
+from .views import (
+    EstudianteListView, EstudianteDetailView, BitacoraCreateView, BitacoraUpdateView, BitacoraDeleteView, 
+    DashboardView, ReporteEstudiantePDF, MisTutoriasView, tomar_asistencia, TutoriaCreateView, TutoriaUpdateView, TutoriaDeleteView, 
+    leer_notificacion, todas_notificaciones, marcar_notificaciones_leidas, eliminar_notificaciones, ReporteAsistenciaView,
+    DetalleAsistenciaEstudianteView
+)
 
 urlpatterns = [
     path('', DashboardView.as_view(), name='home'), 
@@ -22,4 +27,6 @@ urlpatterns = [
     path('notificaciones/', todas_notificaciones, name='todas-notificaciones'),
     path('notificaciones/marcar-leidas/', marcar_notificaciones_leidas, name='marcar-notificaciones-leidas'),
     path('notificaciones/eliminar/', eliminar_notificaciones, name='eliminar-notificaciones'),
+    path('asistencia/reporte/', ReporteAsistenciaView.as_view(), name='asistencia-reporte'),
+    path('asistencia/estudiante/<int:pk>/', DetalleAsistenciaEstudianteView.as_view(), name='asistencia-detalle'),
 ]

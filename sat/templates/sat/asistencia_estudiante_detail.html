@@ -1,0 +1,82 @@
+{% extends 'layouts/base.html' %}
+
+{% block content %}
+<div class="header bg-gradient-info pb-6">
+  <div class="container-fluid">
+    <div class="header-body">
+      <div class="row align-items-center py-4">
+        <div class="col-lg-6 col-7">
+          <h6 class="h2 text-white d-inline-block mb-0">Historial: {{ estudiante.nombre }} {{ estudiante.apellido }}</h6>
+        </div>
+        <div class="col-lg-6 col-5 text-right">
+            <div class="icon icon-shape bg-white text-dark rounded-circle shadow">
+                <span class="font-weight-bold">{{ porcentaje|floatformat:0 }}%</span>
+            </div>
+            <p class="text-white d-inline ml-2">Asistencia Global</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid mt--6">
+  <div class="row">
+    <div class="col-xl-8 center"> <div class="card">
+        <div class="card-header border-0">
+          <div class="row align-items-center">
+            <div class="col">
+              <h3 class="mb-0">Registro de Actividades</h3>
+            </div>
+            <div class="col text-right">
+              <a href="{% url 'asistencia-reporte' %}" class="btn btn-sm btn-primary">Volver al Reporte</a>
+            </div>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table align-items-center table-flush">
+            <thead class="thead-light">
+              <tr>
+                <th>Fecha</th>
+                <th>Tutoría / Tema</th>
+                <th>Estado</th>
+                <th>Tutor</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for registro in historial_asistencia %}
+              <tr>
+                <td>{{ registro.tutoria.fecha|date:"d M Y" }}</td>
+                <td>
+                    <span class="d-block font-weight-bold text-sm text-truncate" style="max-width: 250px;">
+                        {{ registro.tutoria.tema_tutoria|default:"Sin tema" }}
+                    </span>
+                    <small class="text-muted">{{ registro.tutoria.tipo_tutoria.nombre }}</small>
+                </td>
+                <td>
+                    {% if registro.estado_asistencia == 'Presente' %}
+                        <span class="badge badge-success">Presente</span>
+                    {% elif registro.estado_asistencia == 'Justificado' %}
+                        <span class="badge badge-warning">Justificado</span>
+                    {% else %}
+                        <span class="badge badge-danger">Ausente</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="avatar-group">
+                        <a href="#" class="avatar avatar-sm rounded-circle" data-toggle="tooltip" data-original-title="{{ registro.tutoria.tutor.get_full_name }}">
+                          <img alt="Image placeholder" src="/static/assets/img/theme/team-4.jpg"> </a>
+                    </div>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="4" class="text-center">El estudiante no ha sido registrado en ninguna tutoría aún.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% include "includes/footer.html" %}
+</div>
+{% endblock %}

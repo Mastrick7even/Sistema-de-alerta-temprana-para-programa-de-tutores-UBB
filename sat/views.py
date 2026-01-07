@@ -310,10 +310,25 @@ class ReporteEstudiantePDF(LoginRequiredMixin, DetailView):
                 pdf_file = pdf_buffer.getvalue()
                 pdf_buffer.close()
                 
-            except ImportError:
+            except ImportError as import_error:
+                # Log detallado del error para debugging
+                import traceback
+                error_detail = traceback.format_exc()
                 return HttpResponse(
-                    "Error: No hay librerías PDF instaladas. "
-                    "Instala 'weasyprint' (con GTK+) o 'xhtml2pdf' (pip install xhtml2pdf).",
+                    f"Error: No se pudo importar la librería PDF.<br><br>"
+                    f"<strong>Detalle del error:</strong><br>"
+                    f"<pre>{error_detail}</pre><br>"
+                    f"Instala 'xhtml2pdf' (pip install xhtml2pdf==0.2.5)",
+                    status=500
+                )
+            except Exception as general_error:
+                # Capturar cualquier otro error durante la generación del PDF
+                import traceback
+                error_detail = traceback.format_exc()
+                return HttpResponse(
+                    f"Error al generar PDF:<br><br>"
+                    f"<strong>Detalle:</strong><br>"
+                    f"<pre>{error_detail}</pre>",
                     status=500
                 )
         

@@ -31,3 +31,9 @@ apps/static/assets/node_modules
 apps/static/assets/yarn.lock
 apps/static/assets/.temp
 
+data_analysis/raw_data
+data_analysis/*.csv
+
+
+
+

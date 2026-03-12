@@ -33,6 +33,11 @@ apps/static/assets/.temp
 
 data_analysis/raw_data
 data_analysis/*.csv
+# excel files
+*.xlsx
+*.xls
+*.csv
+
 
 
 

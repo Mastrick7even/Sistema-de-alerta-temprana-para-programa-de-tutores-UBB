@@ -52,11 +52,11 @@
 
                   <div class="col-md-3">
                     <div class="form-group">
-                      <select class="form-control" name="estado">
+                      <select class="form-control" name="riesgo_ia">
                         <option value="">Todos los Riesgos</option>
-                        {% for estado in lista_estados %}
-                        <option value="{{ estado.id_estado }}" {% if request.GET.estado|add:"0" == estado.id_estado %} selected{% endif %}>
-                          {{ estado.nombre }}
+                        {% for riesgo in niveles_riesgo_ia %}
+                        <option value="{{ riesgo.id }}" {% if request.GET.riesgo_ia == riesgo.id %} selected {% endif %}>
+                          {{ riesgo.nombre }}
                         </option>
                         {% endfor %}
                       </select>
@@ -117,10 +117,22 @@
                   {{ estudiante.carrera.nombre }}
                 </td>
                 <td>
+                  {% with nivel=estudiante.get_nivel_riesgo_efectivo %}
                   <span class="badge badge-dot mr-4">
-                    <i class="bg-warning"></i>
-                    <span class="status">{{ estudiante.estado_actual.nombre }}</span>
+                    {% if nivel == 3 or nivel == 4 %}
+                      <i class="bg-danger"></i>
+                    {% elif nivel == 2 %}
+                      <i class="bg-warning"></i>
+                    {% elif nivel == 1 %}
+                      <i class="bg-info"></i>
+                    {% elif nivel == 0 %}
+                      <i class="bg-success"></i>
+                    {% else %}
+                      <i class="bg-dark"></i>
+                    {% endif %}
+                    <span class="status">{{ estudiante.get_nivel_riesgo_display_efectivo }}</span>
                   </span>
+                  {% endwith %}
                 </td>
                 <td>
                   <a href="{% url 'estudiante-detail' estudiante.pk %}" class="btn btn-sm btn-neutral">Ver Perfil</a>

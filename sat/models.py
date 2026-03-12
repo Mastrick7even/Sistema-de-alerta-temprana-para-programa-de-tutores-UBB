@@ -75,8 +75,44 @@ class Bitacora(models.Model):
         related_name='bitacoras_creadas'
     )
 
+    # 1. Para saber si es Rojo(3), Amarillo(2) o Verde(1)
+    NIVEL_RIESGO_CHOICES = [(1, 'Bajo'), (2, 'Medio'), (3, 'Alto')]
+    nivel_riesgo = models.IntegerField(choices=NIVEL_RIESGO_CHOICES, default=1)
+
+    # 2. Para saber de dónde vino este dato (ej: "Carga Masiva 2022 - Alerta 1")
+    # Esto reemplaza tu necesidad de normalizar las alarmas antiguas.
+    origen_dato = models.CharField(max_length=150, blank=True, null=True, help_text="Origen del dato histórico")
+
+    # 3. Año académico (útil para filtrar bitácoras por año)
+    anio_academico = models.IntegerField(default=2025)
+
     class Meta:
         db_table = 'bitacora'
+    
+    def save(self, *args, **kwargs):
+        if not self.id_bitacora:
+            texto_analisis = ""
+            if self.observacion: texto_analisis += self.observacion.lower() + " "
+            if self.alarma:
+                if getattr(self.alarma, 'tipo_alarma', None):
+                    texto_analisis += self.alarma.tipo_alarma.nombre.lower() + " "
+                if self.alarma.descripcion:
+                    texto_analisis += self.alarma.descripcion.lower()
+            
+            # Limpiador de tildes vital para la heurística
+            texto_analisis = texto_analisis.replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u')
+            
+            # Diccionarios sin tildes
+            palabras_rojas = ['inasistencia', 'desercion', 'desertar', 'grave', 'psicologico', 'depresion', 'renuncia', 'retiro', 'acoso', 'urgente']
+            palabras_amarillas = ['modular', 'rendimiento', 'reprobacion', 'reprobado', 'atraso', 'dificultad', 'problema', 'familiar', 'economico']
+            
+            if self.nivel_riesgo == 1:
+                if any(palabra in texto_analisis for palabra in palabras_rojas):
+                    self.nivel_riesgo = 3  
+                elif any(palabra in texto_analisis for palabra in palabras_amarillas):
+                    self.nivel_riesgo = 2  
+
+        super().save(*args, **kwargs)
 
 
 class Carrera(models.Model):
@@ -159,6 +195,59 @@ class Estudiante(models.Model):
         blank=True, 
         null=True
     )
+
+    # Campo para la IA (4 niveles)
+    nivel_riesgo_ia = models.IntegerField(default=0, help_text="0:Sano, 1:Bajo, 2:Medio, 3:Alto")
+    
+    # --- HUMAN-IN-THE-LOOP VALIDATION SYSTEM ---
+    # Permite que tutores/coordinadores corrijan la predicción de la IA
+    NIVEL_RIESGO_CHOICES = [
+        (0, 'Sin riesgo'),
+        (1, 'Bajo'),
+        (2, 'Medio'),
+        (3, 'Alto')
+    ]
+    
+    nivel_riesgo_manual = models.IntegerField(
+        choices=NIVEL_RIESGO_CHOICES,
+        null=True,
+        blank=True,
+        help_text="Corrección manual del nivel de riesgo (prioridad sobre IA)"
+    )
+    
+    riesgo_corregido_por = models.ForeignKey(
+        'Usuario',
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='correcciones_riesgo',
+        help_text="Usuario que realizó la última corrección manual"
+    )
+    
+    riesgo_corregido_fecha = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Fecha de la última corrección manual"
+    )
+    
+    def get_nivel_riesgo_efectivo(self):
+        """
+        Retorna el nivel de riesgo efectivo.
+        Prioriza corrección manual sobre predicción de IA.
+        """
+        if self.nivel_riesgo_manual is not None:
+            return self.nivel_riesgo_manual
+        return self.nivel_riesgo_ia
+    
+    def get_nivel_riesgo_display_efectivo(self):
+        """Retorna el nombre del nivel de riesgo efectivo"""
+        nivel = self.get_nivel_riesgo_efectivo()
+        nombres = {-1: 'Sin datos', 0: 'Sin riesgo', 1: 'Bajo', 2: 'Medio', 3: 'Alto', 4: 'Crítico'}
+        return nombres.get(nivel, 'Desconocido')
+    
+    def es_correccion_manual(self):
+        """Retorna True si el riesgo efectivo es una corrección manual"""
+        return self.nivel_riesgo_manual is not None
 
     class Meta:
         db_table = 'estudiante'

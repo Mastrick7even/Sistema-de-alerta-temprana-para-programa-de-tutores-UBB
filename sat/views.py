@@ -34,7 +34,7 @@ class EstudianteListView(LoginRequiredMixin, ListView):
             if not user.is_superuser:
                 return Estudiante.objects.none()
 
-        # 2. FILTROS INTELIGENTES (Aquí ocurre la magia)
+        # 2. FILTROS INTELIGENTES (Conectados a la IA)
         
         # A. Búsqueda por Texto (Nombre, Apellido o RUT)
         search_query = self.request.GET.get('q')
@@ -45,12 +45,13 @@ class EstudianteListView(LoginRequiredMixin, ListView):
                 Q(rut__icontains=search_query)
             )
 
-        # B. Filtro por Estado de Riesgo
-        estado_filter = self.request.GET.get('estado')
-        if estado_filter:
-            queryset = queryset.filter(estado_actual__id_estado=estado_filter)
+        # B. NUEVO Filtro por Nivel de Riesgo IA
+        riesgo_filter = self.request.GET.get('riesgo_ia')
+        # Usamos != '' y is not None porque "0" es un valor válido (Sin Riesgo)
+        if riesgo_filter != '' and riesgo_filter is not None:
+            queryset = queryset.filter(nivel_riesgo_ia=int(riesgo_filter))
 
-        # C. Filtro por Carrera (Solo útil para Encargados o Admins)
+        # C. Filtro por Carrera
         carrera_filter = self.request.GET.get('carrera')
         if carrera_filter:
             queryset = queryset.filter(carrera__id_carrera=carrera_filter)
@@ -59,9 +60,16 @@ class EstudianteListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Pasamos las listas para llenar los <select> del HTML
         context['lista_carreras'] = Carrera.objects.all()
-        context['lista_estados'] = Estado.objects.all()
+        
+        # Eliminamos lista_estados y creamos una lista estática para la IA
+        context['niveles_riesgo_ia'] = [
+            {'id': '3', 'nombre': 'Riesgo Alto'},
+            {'id': '2', 'nombre': 'Riesgo Medio'},
+            {'id': '1', 'nombre': 'Riesgo Bajo'},
+            {'id': '0', 'nombre': 'Sin Riesgo'},
+            {'id': '-1', 'nombre': 'Sin Contacto'},
+        ]
         return context
         
 class EstudianteDetailView(LoginRequiredMixin, DetailView):
@@ -167,10 +175,10 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 perfil = Usuario.objects.get(email=django_user.email)
                 if perfil.rol.nombre == 'Tutor':
                     es_tutor = True
-                elif perfil.rol.nombre == 'Encargado de Carrera': # Asegúrate del nombre exacto en BD
+                elif perfil.rol.nombre == 'Encargado de Carrera': 
                     es_encargado = True
             except Usuario.DoesNotExist:
-                pass # O manejar error
+                pass 
         
         context['es_tutor'] = es_tutor
         context['es_encargado'] = es_encargado
@@ -180,58 +188,43 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             mis_estudiantes = Estudiante.objects.all()
         else:
             try:
-                # Buscamos al usuario SAT por email
                 perfil_usuario = Usuario.objects.get(email=django_user.email)
-                
-                # Si es Tutor, filtramos. Si es Encargado, ve todo.
                 if perfil_usuario.rol.nombre == 'Tutor':
                     mis_estudiantes = Estudiante.objects.filter(tutor_asignado=perfil_usuario)
                 else:
-                    # Asumimos que es Encargado (ve todo)
-                    # O podrías filtrar por carrera si el encargado tiene una asignada
                     mis_estudiantes = Estudiante.objects.all()
             except Usuario.DoesNotExist:
                 mis_estudiantes = Estudiante.objects.none()
 
-        # 2. Calcular KPIs (Indicadores)
+        # 2. Calcular KPIs (Indicadores) BASADOS EN IA
         total_estudiantes = mis_estudiantes.count()
         
-        # Contamos según el nombre del Estado (Ajusta los nombres a lo que pusiste en tu BD)
-        # Usamos __icontains para que busque "Alto" aunque sea "Riesgo Alto"
-        riesgo_alto = mis_estudiantes.filter(estado_actual__nombre__icontains='Alto').count()
-        riesgo_medio = mis_estudiantes.filter(estado_actual__nombre__icontains='Medio').count()
-        riesgo_bajo = mis_estudiantes.filter(estado_actual__nombre__icontains='Bajo').count()
+        # Mapeo de Niveles IA (Ajusta según tu modelo, asumiendo 3, 4 = Alto; 2 = Medio; 1 = Bajo; 0 = Sano; -1 = Ghosting)
+        riesgo_alto = mis_estudiantes.filter(nivel_riesgo_ia__in=[3, 4]).count()
+        riesgo_medio = mis_estudiantes.filter(nivel_riesgo_ia=2).count()
+        riesgo_bajo = mis_estudiantes.filter(nivel_riesgo_ia=1).count()
+        riesgo_sano = mis_estudiantes.filter(nivel_riesgo_ia=0).count()
+        riesgo_ghosting = mis_estudiantes.filter(nivel_riesgo_ia=-1).count()
 
         # 3. Bitácoras recientes (de MIS estudiantes)
         ultimas_bitacoras = Bitacora.objects.filter(estudiante__in=mis_estudiantes)
         
-        # A. Filtro por Carrera
+        # Filtros (Carrera, Fechas, Alerta)
         carrera_filter = self.request.GET.get('carrera_dashboard')
         if carrera_filter:
-            ultimas_bitacoras = ultimas_bitacoras.filter(
-                estudiante__carrera__id_carrera=carrera_filter
-            )
+            ultimas_bitacoras = ultimas_bitacoras.filter(estudiante__carrera__id_carrera=carrera_filter)
         
-        # B. Filtro por Rango de Fechas
         fecha_desde = self.request.GET.get('fecha_desde')
         fecha_hasta = self.request.GET.get('fecha_hasta')
         if fecha_desde:
-            ultimas_bitacoras = ultimas_bitacoras.filter(
-                fecha_registro__date__gte=fecha_desde
-            )
+            ultimas_bitacoras = ultimas_bitacoras.filter(fecha_registro__date__gte=fecha_desde)
         if fecha_hasta:
-            ultimas_bitacoras = ultimas_bitacoras.filter(
-                fecha_registro__date__lte=fecha_hasta
-            )
+            ultimas_bitacoras = ultimas_bitacoras.filter(fecha_registro__date__lte=fecha_hasta)
         
-        # C. Filtro por Tipo de Alerta
         alerta_filter = self.request.GET.get('tipo_alerta')
         if alerta_filter:
-            ultimas_bitacoras = ultimas_bitacoras.filter(
-                alarma__tipo_alarma__id_tipo=alerta_filter
-            )
+            ultimas_bitacoras = ultimas_bitacoras.filter(alarma__tipo_alarma__id_tipo=alerta_filter)
         
-        # Limitar resultados: 5 si no hay filtros, todas si hay filtros
         if not any([carrera_filter, fecha_desde, fecha_hasta, alerta_filter]):
             ultimas_bitacoras = ultimas_bitacoras.order_by('-fecha_registro')[:5]
         else:
@@ -242,27 +235,21 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context['kpi_alto'] = riesgo_alto
         context['kpi_medio'] = riesgo_medio
         context['kpi_bajo'] = riesgo_bajo
-        context['ultimas_bitacoras'] = ultimas_bitacoras
+        context['kpi_sano'] = riesgo_sano
+        context['kpi_ghosting'] = riesgo_ghosting
         
-        # Listas para los filtros del dashboard
+        context['ultimas_bitacoras'] = ultimas_bitacoras
         context['lista_carreras_dashboard'] = Carrera.objects.all()
         context['lista_alertas'] = TipoAlarma.objects.all()
 
-        # Datos para el gráfico [Alto, Medio, Bajo, Sin Riesgo]
-        # Asegúrate que el orden coincida con los colores que pondremos en el HTML
-        data_grafico = [riesgo_alto, riesgo_medio, riesgo_bajo] 
-        
+        # Datos para el gráfico [Alto, Medio, Bajo, Sano, Ghosting]
+        data_grafico = [riesgo_alto, riesgo_medio, riesgo_bajo, riesgo_sano, riesgo_ghosting] 
         context['data_grafico'] = data_grafico
 
         # Calcular estudiantes por año de ingreso
         datos_ingreso = mis_estudiantes.values('anio_ingreso').annotate(total=Count('id_estudiante')).order_by('anio_ingreso')
-
-        # Preparamos dos listas para Chart.js
-        labels_ingreso = [str(d['anio_ingreso']) for d in datos_ingreso]
-        data_ingreso = [d['total'] for d in datos_ingreso]
-
-        context['labels_ingreso'] = labels_ingreso
-        context['data_ingreso'] = data_ingreso
+        context['labels_ingreso'] = [str(d['anio_ingreso']) for d in datos_ingreso]
+        context['data_ingreso'] = [d['total'] for d in datos_ingreso]
         
         return context
 

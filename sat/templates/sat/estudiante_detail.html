@@ -78,12 +78,16 @@ Perfil de {{ estudiante.nombre }}
                         <hr class="my-4" />
 
                         <h3>Estado Actual</h3>
-                        <span class="badge badge-pill badge-lg 
-                {% if 'Alto' in estudiante.estado_actual.nombre %}badge-danger
-                {% elif 'Medio' in estudiante.estado_actual.nombre %}badge-warning
-                {% else %}badge-success{% endif %}">
-                            {{ estudiante.estado_actual.nombre }}
+                        {% with nivel=estudiante.get_nivel_riesgo_efectivo %}
+                        <span class="badge badge-pill badge-lg
+                            {% if nivel == 3 or nivel == 4 %}badge-danger
+                            {% elif nivel == 2 %}badge-warning
+                            {% elif nivel == 1 %}badge-info
+                            {% elif nivel == 0 %}badge-success
+                            {% else %}badge-dark{% endif %}">
+                            {{ estudiante.get_nivel_riesgo_display_efectivo }}
                         </span>
+                        {% endwith %}
                     </div>
                 </div>
             </div>

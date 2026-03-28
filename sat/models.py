@@ -229,25 +229,40 @@ class Estudiante(models.Model):
         blank=True,
         help_text="Fecha de la última corrección manual"
     )
+
+    riesgo_sobrescrito = models.BooleanField(
+        default=False,
+        help_text="Si True, el EC realizó la última corrección (etiqueta guardada para reentrenamiento)"
+    )
+
+    observacion_sobrescritura = models.TextField(
+        null=True,
+        blank=True,
+        help_text="Justificación del Encargado al corregir la predicción de la IA"
+    )
+
+    riesgo_pendiente_validacion = models.BooleanField(
+        default=False,
+        help_text="Si True, la IA cambió el riesgo recientemente y el EC debe confirmar o corregir"
+    )
     
     def get_nivel_riesgo_efectivo(self):
         """
         Retorna el nivel de riesgo efectivo.
-        Prioriza corrección manual sobre predicción de IA.
+        SIEMPRE es nivel_riesgo_ia — el último que actúa (EC o IA) lo actualiza directamente.
+        nivel_riesgo_manual se preserva solo como etiqueta de reentrenamiento.
         """
-        if self.nivel_riesgo_manual is not None:
-            return self.nivel_riesgo_manual
         return self.nivel_riesgo_ia
-    
+
     def get_nivel_riesgo_display_efectivo(self):
         """Retorna el nombre del nivel de riesgo efectivo"""
         nivel = self.get_nivel_riesgo_efectivo()
-        nombres = {-1: 'Sin datos', 0: 'Sin riesgo', 1: 'Bajo', 2: 'Medio', 3: 'Alto', 4: 'Crítico'}
+        nombres = {-1: 'Sin Contacto', 0: 'Sin Riesgo', 1: 'Bajo', 2: 'Medio', 3: 'Alto', 4: 'Crítico'}
         return nombres.get(nivel, 'Desconocido')
-    
+
     def es_correccion_manual(self):
-        """Retorna True si el riesgo efectivo es una corrección manual"""
-        return self.nivel_riesgo_manual is not None
+        """Retorna True si la última actualización fue del EC"""
+        return self.riesgo_sobrescrito
 
     class Meta:
         db_table = 'estudiante'
@@ -394,6 +409,64 @@ class Usuario(models.Model):
     def get_full_name(self):
         """Retorna el nombre completo del usuario"""
         return f"{self.nombre} {self.apellido}"
+
+class HistorialRiesgo(models.Model):
+    """
+    Registra cada cambio en el nivel de riesgo de un estudiante,
+    ya sea automático (ML batch) o manual (Encargado de Carrera).
+    Permite visualizar la tendencia de riesgo (subió/bajó/mantuvo).
+    """
+    ORIGEN_CHOICES = [
+        ('ML', 'Automático ML'),
+        ('HU', 'Manual Humano'),
+    ]
+
+    estudiante = models.ForeignKey(
+        'Estudiante',
+        models.CASCADE,  # Si el estudiante se borra, borrar su historial de riesgo
+        db_column='id_estudiante',
+        related_name='historial_riesgo'
+    )
+
+    riesgo_anterior = models.IntegerField(
+        help_text="Nivel de riesgo antes del cambio"
+    )
+
+    riesgo_nuevo = models.IntegerField(
+        help_text="Nivel de riesgo después del cambio"
+    )
+
+    fecha_cambio = models.DateTimeField(
+        auto_now_add=True,
+        help_text="Fecha y hora en que se registró el cambio"
+    )
+
+    origen_cambio = models.CharField(
+        max_length=2,
+        choices=ORIGEN_CHOICES,
+        default='ML',
+        help_text="Indica si el cambio fue por el batch de ML o por un humano"
+    )
+
+    usuario = models.ForeignKey(
+        'Usuario',
+        models.SET_NULL,
+        null=True,
+        blank=True,
+        db_column='id_usuario',
+        related_name='cambios_riesgo_realizados',
+        help_text="Usuario que realizó el cambio manual (None si fue automático)"
+    )
+
+    class Meta:
+        db_table = 'historial_riesgo'
+        ordering = ['-fecha_cambio']
+        verbose_name = 'Historial de Riesgo'
+        verbose_name_plural = 'Historial de Riesgos'
+
+    def __str__(self):
+        return f"{self.estudiante} | {self.riesgo_anterior}→{self.riesgo_nuevo} ({self.get_origen_cambio_display()}) @ {self.fecha_cambio:%Y-%m-%d %H:%M}"
+
 
 class Notificacion(models.Model):
     destinatario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='notificaciones_recibidas')

@@ -62,6 +62,58 @@
 
   <script src="/static/assets/js/argon.js?v=1.2.0"></script>
 
+  {# ── MODAL GLOBAL DE MENSAJES DJANGO ─────────────────────────── #}
+  {% if messages %}
+  {% for message in messages %}
+  <div class="modal fade" id="modal-msg-{{ forloop.counter }}" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
+      <div class="modal-content
+        {% if message.tags == 'success' %}border-success
+        {% elif message.tags == 'error' %}border-danger
+        {% elif message.tags == 'warning' %}border-warning
+        {% else %}border-info{% endif %}">
+        <div class="modal-header py-3
+          {% if message.tags == 'success' %}bg-gradient-success
+          {% elif message.tags == 'error' %}bg-gradient-danger
+          {% elif message.tags == 'warning' %}bg-gradient-warning
+          {% else %}bg-gradient-info{% endif %}">
+          <h5 class="modal-title text-white">
+            {% if message.tags == 'success' %}<i class="fas fa-check-circle mr-2"></i>Completado
+            {% elif message.tags == 'error' %}<i class="fas fa-times-circle mr-2"></i>Error
+            {% elif message.tags == 'warning' %}<i class="fas fa-exclamation-triangle mr-2"></i>Atención
+            {% else %}<i class="fas fa-info-circle mr-2"></i>Información{% endif %}
+          </h5>
+          <button type="button" class="close text-white" data-dismiss="modal">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body text-center py-4">
+          <p class="mb-0">{{ message }}</p>
+        </div>
+        <div class="modal-footer py-2 justify-content-center">
+          <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      // Abre el primer modal de mensaje al cargar la página
+      $('#modal-msg-1').modal('show');
+      {% if messages|length > 1 %}
+      // Si hay más mensajes, los encadena al cerrar el anterior
+      {% for message in messages %}{% if not forloop.first %}
+      $('#modal-msg-{{ forloop.counter|add:"-1" }}').on('hidden.bs.modal', function () {
+        $('#modal-msg-{{ forloop.counter }}').modal('show');
+      });
+      {% endif %}{% endfor %}
+      {% endif %}
+    });
+  </script>
+  {% endif %}
+
 </body>
 
 </html>
+

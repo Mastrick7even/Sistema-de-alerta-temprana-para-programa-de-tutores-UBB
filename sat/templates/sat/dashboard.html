@@ -170,6 +170,281 @@
   </div>
   {% endif %}
 
+  {% if es_encargado or user.is_superuser %}
+  <div class="row mb-3">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header bg-gradient-default py-3">
+          <div class="row align-items-center">
+            <div class="col">
+              <h5 class="h4 mb-0 text-white">
+                <i class="fas fa-robot mr-2"></i>Recálculo de Riesgo IA
+              </h5>
+            </div>
+            <div class="col-auto">
+              <small class="text-white opacity-8">Carga el modelo y actualiza predicciones</small>
+            </div>
+          </div>
+        </div>
+        <div class="card-body py-3">
+          <div class="row align-items-end">
+
+            {# ── Botón: Todos ── #}
+            <div class="col-md-4 mb-2 mb-md-0">
+              <p class="text-sm text-muted mb-2">
+                <i class="fas fa-users mr-1"></i><strong>Todos los estudiantes</strong><br>
+                <span class="text-xs">Recalcula el riesgo para la totalidad del padrón activo.</span>
+              </p>
+              {# El botón abre el modal de confirmación; el form real está dentro del modal #}
+              <button type="button" class="btn btn-primary btn-sm"
+                data-toggle="modal" data-target="#modal-confirm-todos">
+                <i class="fas fa-sync-alt mr-1"></i> Recalcular todos
+              </button>
+            </div>
+
+            <div class="col-md-1 text-center d-none d-md-block">
+              <div style="border-left: 1px solid #e9ecef; height: 60px;"></div>
+            </div>
+
+            {# ── Formulario: Por Carrera ── #}
+            <div class="col-md-7">
+              <p class="text-sm text-muted mb-2">
+                <i class="fas fa-graduation-cap mr-1"></i><strong>Por carrera</strong><br>
+                <span class="text-xs">Selecciona una carrera para recalcular solo ese grupo.</span>
+              </p>
+              <div class="input-group input-group-sm">
+                <select id="sel-carrera-batch" class="form-control form-control-sm">
+                  <option value="">— Selecciona una carrera —</option>
+                  {% for carrera in lista_carreras_dashboard %}
+                  <option value="{{ carrera.id_carrera }}">{{ carrera.nombre }}</option>
+                  {% endfor %}
+                </select>
+                <div class="input-group-append">
+                  <!-- JS controlará la apertura para validar antes de mostrar el modal -->
+                  <button type="button" class="btn btn-default btn-sm" id="btn-open-carrera-modal">
+                    <i class="fas fa-sync-alt mr-1"></i> Recalcular carrera
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── MODAL: Confirmar recálculo TODOS ── #}
+  <div class="modal fade" id="modal-confirm-todos" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-gradient-primary">
+          <h5 class="modal-title text-white">
+            <i class="fas fa-robot mr-2"></i>Recálculo masivo — Todos los estudiantes
+          </h5>
+          <button type="button" class="close text-white" data-dismiss="modal">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body text-center py-4">
+          <i class="fas fa-sync-alt fa-3x text-primary mb-3"></i>
+          <h5>¿Recalcular el riesgo IA para <strong>todos los estudiantes</strong>?</h5>
+          <p class="text-muted text-sm mb-0">
+            El modelo se cargará y procesará cada estudiante del padrón activo.<br>
+            Dependiendo del total de estudiantes, esto puede tardar algunos minutos.<br>
+            Al finalizar verás un resumen con los resultados.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+          <form method="post" action="{% url 'recalcular-riesgo-masivo' %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-sync-alt mr-1"></i> Sí, recalcular todos
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── MODAL: Confirmar recálculo POR CARRERA ── #}
+  <div class="modal fade" id="modal-confirm-carrera" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <div class="modal-header bg-gradient-default">
+          <h5 class="modal-title text-white">
+            <i class="fas fa-graduation-cap mr-2"></i>Recálculo por carrera
+          </h5>
+          <button type="button" class="close text-white" data-dismiss="modal">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body text-center py-4">
+          <i class="fas fa-graduation-cap fa-3x text-default mb-3"></i>
+          <h5>¿Recalcular riesgo IA para la carrera:</h5>
+          <h4 class="text-primary" id="modal-carrera-nombre">—</h4>
+          <p class="text-muted text-sm mb-0">
+            Se procesarán solo los estudiantes de esa carrera.<br>
+            Al finalizar verás un resumen con los resultados.
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+          <form method="post" action="{% url 'recalcular-riesgo-masivo' %}" id="form-batch-carrera" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="carrera_id" id="input-carrera-id" value="">
+            <button type="submit" class="btn btn-default">
+              <i class="fas fa-sync-alt mr-1"></i> Sí, recalcular carrera
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Enlazar el botón de apertura manual
+        $('#btn-open-carrera-modal').on('click', function() {
+          var sel = document.getElementById('sel-carrera-batch');
+          var carreraId = sel.value;
+          var carreraNombre = sel.options[sel.selectedIndex].text;
+          
+          if (!carreraId) {
+            // Mostrar modal de advertencia en lugar de alert()
+            $('#modal-alerta-carrera').modal('show');
+            return;
+          }
+          
+          // Actualizar modal content y abrir
+          $('#input-carrera-id').val(carreraId);
+          $('#modal-carrera-nombre').text(carreraNombre);
+          $('#modal-confirm-carrera').modal('show');
+        });
+
+        // Mostrar modal de carga con un pequeño retraso para asegurar renderizado antes del POST
+        $('#modal-confirm-todos form, #form-batch-carrera').on('submit', function(e) {
+            if (!$(this).data('submitted')) {
+                e.preventDefault(); // Pausar submit original
+                $(this).data('submitted', true); // Marcar como enviado
+                var form = this;
+                
+                // Ocultar modales de confirmación e invocar loader
+                $('#modal-confirm-todos, #modal-confirm-carrera').modal('hide');
+                $('#modal-cargando').modal({backdrop: 'static', keyboard: false});
+                
+                // Retrasar el submit 150ms para permitir a Bootstrap renderizar el spinner
+                setTimeout(function() {
+                    form.submit();
+                }, 150);
+            }
+        });
+    });
+  </script>
+
+  <!-- MODAL ADVERTENCIA: SELECCIONAR CARRERA -->
+  <div class="modal fade" id="modal-alerta-carrera" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
+      <div class="modal-content border-danger">
+        <div class="modal-header bg-gradient-danger py-3">
+          <h5 class="modal-title text-white"><i class="fas fa-exclamation-triangle mr-2"></i>Atención</h5>
+          <button type="button" class="close text-white" data-dismiss="modal">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body text-center py-4">
+          <p class="mb-0">Por favor, selecciona una carrera en el menú desplegable antes de continuar.</p>
+        </div>
+        <div class="modal-footer py-2 justify-content-center">
+          <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Entendido</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL GLOBAL DE CARGA (Spinner) -->
+  <div class="modal fade" id="modal-cargando" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
+      <div class="modal-content">
+        <div class="modal-body text-center py-5">
+            <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+              <span class="sr-only">Cargando...</span>
+            </div>
+            <h5 class="mb-1">Ejecutando Inteligencia Artificial...</h5>
+            <p class="text-muted text-sm mb-0">Por favor, no cierres esta ventana.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% endif %}
+
+
+  {# PANEL: Estudiantes Pendientes de Validación IA #}
+  {% if pendientes_validacion %}
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card shadow border-0">
+        <div class="card-header bg-transparent pb-0">
+          <div class="row align-items-center">
+            <div class="col">
+              <h3 class="mb-0 text-primary">
+                <i class="fas fa-clock mr-2"></i>Predicciones pendientes de validación
+              </h3>
+            </div>
+            <div class="col text-right">
+                <span class="badge badge-primary">{{ pendientes_validacion.count }} Total</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table align-items-center table-flush text-dark">
+              <thead class="thead-light">
+                <tr>
+                  <th scope="col">Estudiante</th>
+                  <th scope="col">IA Predijo (Temporal)</th>
+                  <th scope="col" class="text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for est in pendientes_validacion|slice:":10" %}
+                <tr>
+                  <td>
+                    <strong>{{ est.nombre }} {{ est.apellido }}</strong><br>
+                    <small class="text-muted">{{ est.rut }}</small>
+                  </td>
+                  <td>
+                    <span class="badge badge-info">
+                      Nivel {% if est.nivel_riesgo_ia == -1 %}Sin Contacto
+                      {% elif est.nivel_riesgo_ia == 0 %}Sin Riesgo
+                      {% elif est.nivel_riesgo_ia == 1 %}Bajo
+                      {% elif est.nivel_riesgo_ia == 2 %}Medio
+                      {% elif est.nivel_riesgo_ia == 3 or est.nivel_riesgo_ia == 4 %}Alto{% endif %}
+                    </span>
+                  </td>
+                  <td class="text-right">
+                    <a href="{% url 'estudiante-detail' est.pk %}" class="btn btn-sm btn-outline-primary">
+                      Evaluar <i class="fas fa-arrow-right ml-1"></i>
+                    </a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% if pendientes_validacion.count > 10 %}
+          <div class="text-center mt-3">
+              <small class="text-muted opacity-8">Mostrando los primeros 10 registros. Accede a los perfiles para validar el resto.</small>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <div class="row">
     <div class="col-xl-12">
       <div class="card">

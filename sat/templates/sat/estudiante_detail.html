@@ -54,10 +54,106 @@ Perfil de {{ estudiante.nombre }}
                 </div>
 
                 <div class="card-header text-center border-0 pt-8 pt-md-4 pb-0 pb-md-4">
-                    <div class="d-flex justify-content-between">
-                        <a href="#" class="btn btn-sm btn-info mr-4">Email</a>
-                        <a href="#" class="btn btn-sm btn-default float-right">Mensaje</a>
+                    <div class="d-flex justify-content-center">
+                        <form method="post" action="{% url 'recalcular-riesgo-estudiante' estudiante.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-default"
+                                title="Recalcula el nivel de riesgo IA con las últimas observaciones">
+                                <i class="fas fa-sync-alt mr-1"></i> Recalcular Riesgo IA
+                            </button>
+                        </form>
                     </div>
+
+                    {# ── Banner de validación pendiente ── #}
+                    {% if estudiante.riesgo_pendiente_validacion %}
+                    <div class="alert alert-warning alert-dismissible fade show mt-3 mb-0 py-2 px-3 text-left" role="alert"
+                        style="font-size:0.82rem; border-radius:8px;">
+                        <i class="fas fa-clock mr-1"></i>
+                        <strong>Predicción IA pendiente de validación.</strong>
+                        {% if es_encargado or user.is_superuser %}
+                        Confirma la predicción o usa el panel de corrección.
+                        
+                        <div class="mt-2 mb-2 p-2 bg-white rounded border border-light text-muted d-inline-block shadow-sm">
+                            <small class="font-weight-bold">Antes:</small> 
+                            <span class="badge badge-secondary">
+                                {% if ultimo_historial_ml.riesgo_anterior == -1 %}Sin Contacto
+                                {% elif ultimo_historial_ml.riesgo_anterior == 0 %}Sin Riesgo
+                                {% elif ultimo_historial_ml.riesgo_anterior == 1 %}Bajo
+                                {% elif ultimo_historial_ml.riesgo_anterior == 2 %}Medio
+                                {% elif ultimo_historial_ml.riesgo_anterior == 3 or ultimo_historial_ml.riesgo_anterior == 4 %}Alto
+                                {% else %}Sin histórico
+                                {% endif %}
+                            </span> 
+                            <i class="fas fa-arrow-right mx-2"></i>
+                            <small class="font-weight-bold text-dark">Nueva Predicción IA:</small> 
+                            <span class="badge badge-info text-dark">
+                                {% if estudiante.nivel_riesgo_ia == -1 %}Sin Contacto
+                                {% elif estudiante.nivel_riesgo_ia == 0 %}Sin Riesgo
+                                {% elif estudiante.nivel_riesgo_ia == 1 %}Bajo
+                                {% elif estudiante.nivel_riesgo_ia == 2 %}Medio
+                                {% elif estudiante.nivel_riesgo_ia == 3 or estudiante.nivel_riesgo_ia == 4 %}Alto{% endif %}
+                            </span>
+                        </div>
+
+                        <hr class="my-2">
+                        <div class="d-flex justify-content-start align-items-center">
+                            <button type="button" class="btn btn-success btn-sm mr-2" data-toggle="modal" data-target="#modal-confirmar-prediccion">
+                                <i class="fas fa-check mr-1"></i> Confirmar
+                            </button>
+                            <button type="button" class="btn btn-danger btn-sm" data-toggle="modal" data-target="#modal-rechazar-prediccion"
+                                    title="Restaura el nivel de riesgo que tenía antes de esta predicción">
+                                <i class="fas fa-times mr-1"></i> Rechazar
+                            </button>
+                        </div>
+
+                        <!-- Modal Confirmar -->
+                        <div class="modal fade" id="modal-confirmar-prediccion" tabindex="-1" role="dialog" aria-hidden="true">
+                          <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
+                            <div class="modal-content">
+                              <div class="modal-header bg-gradient-success py-3">
+                                <h5 class="modal-title text-white"><i class="fas fa-check-circle mr-2"></i>Confirmar</h5>
+                                <button type="button" class="close text-white" data-dismiss="modal"><span aria-hidden="true">&times;</span></button>
+                              </div>
+                              <div class="modal-body text-center py-4 text-wrap text-dark" style="white-space: normal;">
+                                <p class="mb-0">¿Estás seguro de <strong>confirmar</strong> la predicción de la IA?</p>
+                              </div>
+                              <div class="modal-footer py-2 justify-content-center">
+                                <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Cancelar</button>
+                                <form method="post" action="{% url 'confirmar-prediccion-ia' estudiante.pk %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-success">Sí, confirmar</button>
+                                </form>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Modal Rechazar -->
+                        <div class="modal fade" id="modal-rechazar-prediccion" tabindex="-1" role="dialog" aria-hidden="true">
+                          <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
+                            <div class="modal-content">
+                              <div class="modal-header bg-gradient-danger py-3">
+                                <h5 class="modal-title text-white"><i class="fas fa-times-circle mr-2"></i>Rechazar</h5>
+                                <button type="button" class="close text-white" data-dismiss="modal"><span aria-hidden="true">&times;</span></button>
+                              </div>
+                              <div class="modal-body text-center py-4 text-wrap text-dark" style="white-space: normal;">
+                                <p class="mb-0">¿Estás seguro de <strong>rechazar</strong> esta predicción? El nivel de riesgo volverá al estado anterior.</p>
+                              </div>
+                              <div class="modal-footer py-2 justify-content-center">
+                                <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Cancelar</button>
+                                <form method="post" action="{% url 'rechazar-prediccion-ia' estudiante.pk %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-danger">Sí, rechazar</button>
+                                </form>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        {% else %}
+                        En espera de revisión por el Encargado de Carrera.
+                        {% endif %}
+                    </div>
+                    {% endif %}
                 </div>
 
                 <div class="card-body pt-0">
@@ -78,19 +174,79 @@ Perfil de {{ estudiante.nombre }}
                         <hr class="my-4" />
 
                         <h3>Estado Actual</h3>
-                        {% with nivel=estudiante.get_nivel_riesgo_efectivo %}
+                        {# Siempre se muestra la predicción IA más reciente #}
                         <span class="badge badge-pill badge-lg
-                            {% if nivel == 3 or nivel == 4 %}badge-danger
-                            {% elif nivel == 2 %}badge-warning
-                            {% elif nivel == 1 %}badge-info
-                            {% elif nivel == 0 %}badge-success
+                            {% if estudiante.nivel_riesgo_ia == 3 or estudiante.nivel_riesgo_ia == 4 %}badge-danger
+                            {% elif estudiante.nivel_riesgo_ia == 2 %}badge-warning
+                            {% elif estudiante.nivel_riesgo_ia == 1 %}badge-info
+                            {% elif estudiante.nivel_riesgo_ia == 0 %}badge-success
                             {% else %}badge-dark{% endif %}">
-                            {{ estudiante.get_nivel_riesgo_display_efectivo }}
+                            {% if estudiante.nivel_riesgo_ia == -1 %}Sin Contacto
+                            {% elif estudiante.nivel_riesgo_ia == 0 %}Sin Riesgo
+                            {% elif estudiante.nivel_riesgo_ia == 1 %}Bajo
+                            {% elif estudiante.nivel_riesgo_ia == 2 %}Medio
+                            {% elif estudiante.nivel_riesgo_ia == 3 or estudiante.nivel_riesgo_ia == 4 %}Alto
+                            {% else %}Sin datos{% endif %}
                         </span>
-                        {% endwith %}
+
+                        {# Indicador informativo: existe una etiqueta manual guardada para reentrenamiento #}
+                        {% if estudiante.riesgo_sobrescrito %}
+                        <div class="mt-2">
+                            <span class="badge badge-pill badge-light border text-muted" style="font-size:0.65rem">
+                                <i class="fas fa-tag mr-1"></i>Etiqueta EC guardada: nivel {{ estudiante.nivel_riesgo_manual }}
+                            </span>
+                            {% if estudiante.observacion_sobrescritura %}
+                            <small class="d-block text-muted font-italic mt-1" style="font-size:0.7rem">"{{ estudiante.observacion_sobrescritura }}"</small>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <div class="mt-2">
+                            <small class="text-muted"><i class="fas fa-robot mr-1"></i>Predicción automática IA</small>
+                        </div>
+                        {% endif %}
+
                     </div>
                 </div>
             </div>
+
+            {# ── PANEL HITL: solo visible para Encargados de Carrera ── #}
+            {% if es_encargado %}
+            <div class="card">
+                <div class="card-header bg-gradient-default">
+                    <h5 class="h4 mb-0 text-white">
+                        <i class="fas fa-user-shield mr-2"></i>Corrección de Riesgo
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-sm text-muted mb-3">
+                        Tu corrección se guarda como <strong>retroalimentación para el modelo</strong>.
+                        La IA seguirá recalculando en el batch nocturno, pero se registra tu criterio.
+                    </p>
+                    <form method="post" action="{% url 'sobrescribir-riesgo' estudiante.pk %}">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label class="form-control-label">Nivel de riesgo correcto</label>
+                            <select name="riesgo_manual" class="form-control form-control-sm" required>
+                                <option value="">-- Seleccionar --</option>
+                                <option value="0" {% if estudiante.nivel_riesgo_manual == 0 %}selected{% endif %}>0 - Sin Riesgo</option>
+                                <option value="1" {% if estudiante.nivel_riesgo_manual == 1 %}selected{% endif %}>1 - Bajo</option>
+                                <option value="2" {% if estudiante.nivel_riesgo_manual == 2 %}selected{% endif %}>2 - Medio</option>
+                                <option value="3" {% if estudiante.nivel_riesgo_manual == 3 %}selected{% endif %}>3 - Alto</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-control-label">Justificación <small class="text-muted">(opcional)</small></label>
+                            <textarea name="observacion_sobrescritura" class="form-control form-control-sm" rows="2"
+                                placeholder="Ej: Estudiante en proceso de recuperación académica confirmada...">{{ estudiante.observacion_sobrescritura|default:'' }}</textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm btn-block">
+                            <i class="fas fa-save mr-1"></i> Guardar corrección
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
 
             <div class="card">
                 <div class="card-header">
@@ -110,6 +266,7 @@ Perfil de {{ estudiante.nombre }}
                 </div>
             </div>
         </div>
+
 
         <div class="col-xl-8 order-xl-1">
             <div class="card">
@@ -196,6 +353,93 @@ Perfil de {{ estudiante.nombre }}
                     {% endif %}
                 </div>
             </div>
+
+            {# ── HISTORIAL DE RIESGO (Tendencia) ── #}
+            {% if historial_riesgo %}
+            <div class="card mt-3">
+                <div class="card-header border-0">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h3 class="mb-0">
+                                <i class="fas fa-chart-line mr-2 text-primary"></i>Historial de Riesgo
+                            </h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm align-items-center table-flush">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Tendencia</th>
+                                    <th>Cambio</th>
+                                    <th>Origen</th>
+                                    {% if es_encargado %}<th></th>{% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for h in historial_riesgo %}
+                                <tr>
+                                    <td class="text-sm">{{ h.fecha_cambio|date:"d M Y H:i" }}</td>
+                                    <td>
+                                        {% if h.riesgo_nuevo > h.riesgo_anterior %}
+                                            <span class="text-danger font-weight-bold">
+                                                <i class="fas fa-arrow-up"></i> Subió
+                                            </span>
+                                        {% elif h.riesgo_nuevo < h.riesgo_anterior %}
+                                            <span class="text-success font-weight-bold">
+                                                <i class="fas fa-arrow-down"></i> Bajó
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">
+                                                <i class="fas fa-equals"></i> Igual
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-sm">
+                                        <span class="badge badge-secondary">{{ h.riesgo_anterior }}</span>
+                                        <i class="fas fa-arrow-right text-muted mx-1" style="font-size:0.6rem"></i>
+                                        <span class="badge {% if h.riesgo_nuevo >= 3 %}badge-danger{% elif h.riesgo_nuevo == 2 %}badge-warning{% elif h.riesgo_nuevo == 1 %}badge-info{% else %}badge-success{% endif %}">
+                                            {{ h.riesgo_nuevo }}
+                                        </span>
+                                    </td>
+                                    <td class="text-sm">
+                                        {% if h.origen_cambio == 'ML' %}
+                                            <span class="badge badge-pill badge-default">
+                                                <i class="fas fa-robot mr-1"></i>IA
+                                            </span>
+                                        {% else %}
+                                            <span class="badge badge-pill badge-info">
+                                                <i class="fas fa-user-edit mr-1"></i>Manual
+                                            </span>
+                                            {% if h.usuario %}
+                                                <small class="d-block text-muted">{{ h.usuario.nombre }}</small>
+                                            {% endif %}
+                                        {% endif %}
+                                    </td>
+                                    {% if es_encargado %}
+                                    <td class="text-right">
+                                        <button type="button"
+                                            class="btn btn-sm btn-icon-only text-danger"
+                                            title="Eliminar registro"
+                                            data-toggle="modal"
+                                            data-target="#modal-notification"
+                                            data-url="{% url 'eliminar-historial-riesgo' h.pk %}"
+                                            onclick="setDeleteUrl(this.getAttribute('data-url'))">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                    {% endif %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
         </div>
     </div>
 

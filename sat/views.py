@@ -9,7 +9,7 @@ from django.conf import settings
 from django.contrib import messages
 import os
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
-from .models import Estudiante, Usuario, Bitacora, Estado, Carrera, TipoAlarma, Tutoria, Asistencia, Notificacion
+from .models import Estudiante, Usuario, Bitacora, Estado, Carrera, TipoAlarma, Tutoria, Asistencia, Notificacion, HistorialRiesgo
 from .forms import BitacoraForm, TutoriaForm
 
 class EstudianteListView(LoginRequiredMixin, ListView):
@@ -90,10 +90,22 @@ class EstudianteDetailView(LoginRequiredMixin, DetailView):
         except Usuario.DoesNotExist:
             return Estudiante.objects.none
 
-    def get_context_data(self, **kwargs): # Este método sirve para enviar datos EXTRA al template. (aquí enviaremos la bitácora del tutorado)
+    def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs) 
-        estudiante_actual = self.object # 'self.object' es el estudiante que Django ya encontró por nosotros
+        estudiante_actual = self.object
         context['bitacoras'] = estudiante_actual.bitacora_set.all().order_by('-fecha_registro')
+        context['historial_riesgo'] = HistorialRiesgo.objects.filter(
+            estudiante=estudiante_actual
+        ).order_by('-fecha_cambio')[:10]
+        context['ultimo_historial_ml'] = HistorialRiesgo.objects.filter(
+            estudiante=estudiante_actual, origen_cambio='ML'
+        ).order_by('-fecha_cambio').first()
+        try:
+            perfil = Usuario.objects.get(email=self.request.user.email)
+            context['es_encargado'] = perfil.rol.nombre == 'Encargado de Carrera'
+            context['perfil_usuario'] = perfil
+        except Usuario.DoesNotExist:
+            context['es_encargado'] = self.request.user.is_superuser
         return context
     
 class BitacoraCreateView(LoginRequiredMixin, CreateView):
@@ -199,14 +211,18 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         # 2. Calcular KPIs (Indicadores) BASADOS EN IA
         total_estudiantes = mis_estudiantes.count()
         
-        # Mapeo de Niveles IA (Ajusta según tu modelo, asumiendo 3, 4 = Alto; 2 = Medio; 1 = Bajo; 0 = Sano; -1 = Ghosting)
+        # Mapeo de Niveles IA
         riesgo_alto = mis_estudiantes.filter(nivel_riesgo_ia__in=[3, 4]).count()
         riesgo_medio = mis_estudiantes.filter(nivel_riesgo_ia=2).count()
         riesgo_bajo = mis_estudiantes.filter(nivel_riesgo_ia=1).count()
         riesgo_sano = mis_estudiantes.filter(nivel_riesgo_ia=0).count()
         riesgo_ghosting = mis_estudiantes.filter(nivel_riesgo_ia=-1).count()
 
+        # Estudiantes pendientes de validación IA (para el nuevo panel)
+        context['pendientes_validacion'] = mis_estudiantes.filter(riesgo_pendiente_validacion=True).order_by('-id_estudiante')
+
         # 3. Bitácoras recientes (de MIS estudiantes)
+
         ultimas_bitacoras = Bitacora.objects.filter(estudiante__in=mis_estudiantes)
         
         # Filtros (Carrera, Fechas, Alerta)
@@ -570,3 +586,311 @@ class DetalleAsistenciaEstudianteView(LoginRequiredMixin, DetailView):
         presentes = context['historial_asistencia'].filter(estado_asistencia='Presente').count()
         context['porcentaje'] = (presentes / total * 100) if total > 0 else 0
         return context
+
+
+@login_required
+def sobrescribir_riesgo(request, pk):
+    """
+    El EC corrige el riesgo: ACTUALIZA nivel_riesgo_ia directamente (el EC toma el control).
+    Guarda nivel_riesgo_manual como etiqueta de reentrenamiento para el modelo.
+    Limpia riesgo_pendiente_validacion porque el EC ya actuó.
+    """
+    from django.utils import timezone
+
+    estudiante = get_object_or_404(Estudiante, pk=pk)
+
+    try:
+        perfil = Usuario.objects.get(email=request.user.email)
+        if perfil.rol.nombre != 'Encargado de Carrera' and not request.user.is_superuser:
+            messages.error(request, '⛔ Solo los Encargados de Carrera pueden corregir el riesgo.')
+            return redirect('estudiante-detail', pk=pk)
+    except Usuario.DoesNotExist:
+        if not request.user.is_superuser:
+            messages.error(request, '⛔ No tienes permisos para esta acción.')
+            return redirect('estudiante-detail', pk=pk)
+        perfil = None
+
+    if request.method == 'POST':
+        riesgo_manual_str = request.POST.get('riesgo_manual', '')
+        observacion = request.POST.get('observacion_sobrescritura', '').strip()
+
+        if not riesgo_manual_str:
+            messages.error(request, '❌ Debes seleccionar un nivel de riesgo.')
+            return redirect('estudiante-detail', pk=pk)
+
+        try:
+            riesgo_manual = int(riesgo_manual_str)
+            if riesgo_manual not in [0, 1, 2, 3]:
+                raise ValueError
+        except ValueError:
+            messages.error(request, '❌ Nivel de riesgo inválido.')
+            return redirect('estudiante-detail', pk=pk)
+
+        # El EC toma el control: nivel_riesgo_ia = valor del EC (es el último que actúa)
+        # nivel_riesgo_manual queda como etiqueta de reentrenamiento
+        estudiante.nivel_riesgo_ia = riesgo_manual          # ← valor que se muestra
+        estudiante.nivel_riesgo_manual = riesgo_manual      # ← etiqueta para reentrenamiento
+        estudiante.riesgo_sobrescrito = True                # ← indica que el EC fue el último
+        estudiante.riesgo_pendiente_validacion = False      # ← el EC ya validó, no hay pendiente
+        estudiante.observacion_sobrescritura = observacion or None
+        estudiante.riesgo_corregido_por = perfil
+        estudiante.riesgo_corregido_fecha = timezone.now()
+        estudiante.save(update_fields=[
+            'nivel_riesgo_ia', 'nivel_riesgo_manual', 'riesgo_sobrescrito',
+            'riesgo_pendiente_validacion', 'observacion_sobrescritura',
+            'riesgo_corregido_por', 'riesgo_corregido_fecha'
+        ])
+
+        nivel_nombre = {0: 'Sin Riesgo', 1: 'Bajo', 2: 'Medio', 3: 'Alto'}.get(riesgo_manual, '?')
+        messages.success(
+            request,
+            f'✅ Corrección guardada: {estudiante.nombre} {estudiante.apellido} → "{nivel_nombre}". Etiqueta registrada para reentrenamiento.'
+        )
+        return redirect('estudiante-detail', pk=pk)
+
+    return redirect('estudiante-detail', pk=pk)
+
+
+@login_required
+def eliminar_historial_riesgo(request, pk):
+    """
+    Permite a Encargados de Carrera eliminar un registro erróneo del historial de riesgo.
+    Reutiliza el modal de confirmación existente en el template.
+    """
+    historial = get_object_or_404(HistorialRiesgo, pk=pk)
+    estudiante_pk = historial.estudiante.pk
+
+    try:
+        perfil = Usuario.objects.get(email=request.user.email)
+        if perfil.rol.nombre != 'Encargado de Carrera' and not request.user.is_superuser:
+            messages.error(request, '⛔ Solo los Encargados de Carrera pueden eliminar registros del historial.')
+            return redirect('estudiante-detail', pk=estudiante_pk)
+    except Usuario.DoesNotExist:
+        if not request.user.is_superuser:
+            messages.error(request, '⛔ No tienes permisos.')
+            return redirect('estudiante-detail', pk=estudiante_pk)
+
+    if request.method == 'POST':
+        historial.delete()
+        messages.success(request, '✅ Registro de historial eliminado correctamente.')
+
+    return redirect('estudiante-detail', pk=estudiante_pk)
+
+
+@login_required
+def recalcular_riesgo_estudiante(request, pk):
+    """
+    Recalcula el riesgo IA para UN estudiante específico de forma síncrona.
+    Accesible para Tutores y Encargados de Carrera (y superusuarios).
+    El resultado aparece inmediatamente en la página del estudiante.
+    """
+    from .services import PredictorRiesgo
+
+    estudiante = get_object_or_404(Estudiante, pk=pk)
+
+    if request.method == 'POST':
+        try:
+            predictor = PredictorRiesgo()
+            if not predictor.cerebro:
+                messages.error(request, '❌ El modelo IA no está disponible. Contacta al administrador.')
+                return redirect('estudiante-detail', pk=pk)
+
+            riesgo_anterior = estudiante.nivel_riesgo_ia
+            nuevo_riesgo = predictor.predecir_estudiante(estudiante)
+
+            if nuevo_riesgo != riesgo_anterior or estudiante.riesgo_sobrescrito:
+                # IA toma el control: actualiza nivel_riesgo_ia y marca como pendiente de validación
+                estudiante.nivel_riesgo_ia = nuevo_riesgo
+                campos = ['nivel_riesgo_ia', 'riesgo_pendiente_validacion']
+                if nuevo_riesgo != riesgo_anterior:
+                    estudiante.riesgo_pendiente_validacion = True   # EC debe confirmar este cambio
+                if estudiante.riesgo_sobrescrito:
+                    estudiante.riesgo_sobrescrito = False  # La etiqueta manual sigue en nivel_riesgo_manual
+                    campos.append('riesgo_sobrescrito')
+                estudiante.save(update_fields=campos)
+
+                nivel_nombre = {-1: 'Sin Contacto', 0: 'Sin Riesgo', 1: 'Bajo', 2: 'Medio', 3: 'Alto'}.get(nuevo_riesgo, '?')
+                messages.success(
+                    request,
+                    f'🤖 Riesgo actualizado: {riesgo_anterior} → {nuevo_riesgo} ({nivel_nombre}). '
+                    f'⏳ Pendiente de confirmación por el Encargado de Carrera.'
+                )
+            else:
+                messages.info(request, f'ℹ️ El riesgo no cambió (sigue en nivel {riesgo_anterior}).')
+
+        except Exception as e:
+            messages.error(request, f'❌ Error al recalcular: {e}')
+
+    return redirect('estudiante-detail', pk=pk)
+
+
+@login_required
+def recalcular_riesgo_masivo(request):
+    """
+    Recalcula el riesgo IA para TODOS los estudiantes o para una CARRERA específica.
+    Solo accesible para Encargados de Carrera y superusuarios.
+    Muestra un resumen al terminar.
+    """
+    from .services import PredictorRiesgo
+
+    # Seguridad: solo Encargados o superusuarios
+    try:
+        perfil = Usuario.objects.get(email=request.user.email)
+        if perfil.rol.nombre != 'Encargado de Carrera' and not request.user.is_superuser:
+            messages.error(request, '⛔ Solo los Encargados de Carrera pueden ejecutar el recálculo masivo.')
+            return redirect('home')
+    except Usuario.DoesNotExist:
+        if not request.user.is_superuser:
+            messages.error(request, '⛔ No tienes permisos.')
+            return redirect('home')
+
+    if request.method == 'POST':
+        carrera_id = request.POST.get('carrera_id', '').strip()
+
+        # Filtrar por carrera o tomar todos
+        qs = Estudiante.objects.all()
+        if carrera_id:
+            qs = qs.filter(carrera__id_carrera=carrera_id)
+            scope_label = Carrera.objects.filter(id_carrera=carrera_id).values_list('nombre', flat=True).first() or 'Carrera desconocida'
+        else:
+            scope_label = 'todos los estudiantes'
+
+        total = qs.count()
+        if total == 0:
+            messages.warning(request, '⚠️ No se encontraron estudiantes con ese filtro.')
+            return redirect('home')
+
+        # Cargar modelo UNA vez
+        try:
+            predictor = PredictorRiesgo()
+            if not predictor.cerebro:
+                messages.error(request, '❌ El modelo IA no está disponible.')
+                return redirect('home')
+        except Exception as e:
+            messages.error(request, f'❌ Error al cargar el modelo: {e}')
+            return redirect('home')
+
+        actualizados = 0
+        sin_cambio = 0
+        errores = 0
+
+        for estudiante in qs.iterator():
+            try:
+                nuevo_riesgo = predictor.predecir_estudiante(estudiante)
+                hubo_cambio_riesgo = nuevo_riesgo != estudiante.nivel_riesgo_ia
+                tiene_override = estudiante.riesgo_sobrescrito
+
+                if hubo_cambio_riesgo or tiene_override:
+                    estudiante.nivel_riesgo_ia = nuevo_riesgo
+                    campos = ['nivel_riesgo_ia']
+                    if tiene_override:
+                        # La IA toma el control; la etiqueta manual queda preservada en nivel_riesgo_manual
+                        estudiante.riesgo_sobrescrito = False
+                        campos.append('riesgo_sobrescrito')
+                    estudiante.save(update_fields=campos)
+                    actualizados += 1
+                else:
+                    sin_cambio += 1
+            except Exception:
+                errores += 1
+
+        msg = (
+            f'🤖 Recálculo completado para {scope_label}: '
+            f'{total} estudiantes procesados — '
+            f'{actualizados} actualizados, {sin_cambio} sin cambio'
+        )
+        if errores:
+            msg += f', {errores} con error'
+        if actualizados > 0:
+            msg += f'. ⏳ {actualizados} estudiante(s) pendiente(s) de confirmación.'
+        messages.success(request, msg)
+
+    return redirect('home')
+
+
+@login_required
+def confirmar_prediccion_ia(request, pk):
+    """
+    El EC confirma la predicción IA sin cambiarla.
+    Simplemente limpia riesgo_pendiente_validacion = False.
+    Solo Encargados de Carrera y superusuarios pueden confirmar.
+    """
+    estudiante = get_object_or_404(Estudiante, pk=pk)
+
+    try:
+        perfil = Usuario.objects.get(email=request.user.email)
+        if perfil.rol.nombre != 'Encargado de Carrera' and not request.user.is_superuser:
+            messages.error(request, '⛔ Solo los Encargados de Carrera pueden confirmar predicciones.')
+            return redirect('estudiante-detail', pk=pk)
+    except Usuario.DoesNotExist:
+        if not request.user.is_superuser:
+            messages.error(request, '⛔ No tienes permisos.')
+            return redirect('estudiante-detail', pk=pk)
+
+    if request.method == 'POST':
+        nivel_nombre = {-1: 'Sin Contacto', 0: 'Sin Riesgo', 1: 'Bajo', 2: 'Medio', 3: 'Alto'}.get(estudiante.nivel_riesgo_ia, '?')
+        estudiante.riesgo_pendiente_validacion = False
+        estudiante.save(update_fields=['riesgo_pendiente_validacion'])
+        messages.success(
+            request,
+            f'✅ Predicción confirmada: {estudiante.nombre} {estudiante.apellido} → Nivel {nivel_nombre}.'
+        )
+
+    return redirect('estudiante-detail', pk=pk)
+
+
+@login_required
+def rechazar_prediccion_ia(request, pk):
+    """
+    El EC rechaza la nueva predicción de la IA.
+    Se busca el último historial de riesgo para restaurar el valor anterior,
+    y se guarda como una corrección manual.
+    """
+    from django.utils import timezone
+    estudiante = get_object_or_404(Estudiante, pk=pk)
+
+    try:
+        perfil = Usuario.objects.get(email=request.user.email)
+        if perfil.rol.nombre != 'Encargado de Carrera' and not request.user.is_superuser:
+            messages.error(request, '⛔ Solo los Encargados de Carrera pueden rechazar predicciones.')
+            return redirect('estudiante-detail', pk=pk)
+    except Usuario.DoesNotExist:
+        if not request.user.is_superuser:
+            messages.error(request, '⛔ No tienes permisos.')
+            return redirect('estudiante-detail', pk=pk)
+
+    if request.method == 'POST':
+        if not estudiante.riesgo_pendiente_validacion:
+            messages.warning(request, '⚠️ No hay predicción pendiente que rechazar.')
+            return redirect('estudiante-detail', pk=pk)
+
+        # Buscar el último cambio hecho por la IA (el que estamos rechazando)
+        ultimo_historial = HistorialRiesgo.objects.filter(
+            estudiante=estudiante, origen_cambio='ML'
+        ).order_by('-fecha_cambio').first()
+
+        riesgo_anterior = ultimo_historial.riesgo_anterior if ultimo_historial else 0
+
+        # Rechazar implica que el EC toma el control restaurando el riesgo anterior
+        estudiante.nivel_riesgo_ia = riesgo_anterior
+        estudiante.nivel_riesgo_manual = riesgo_anterior
+        estudiante.riesgo_sobrescrito = True
+        estudiante.riesgo_pendiente_validacion = False
+        estudiante.observacion_sobrescritura = "Predicción IA rechazada por EC. Se restauró el nivel previo."
+        estudiante.riesgo_corregido_por = perfil if perfil else None
+        estudiante.riesgo_corregido_fecha = timezone.now()
+        
+        # Guardar todo. El signal pre_save generará el nuevo Historial originado por 'HU'
+        estudiante.save(update_fields=[
+            'nivel_riesgo_ia', 'nivel_riesgo_manual', 'riesgo_sobrescrito',
+            'riesgo_pendiente_validacion', 'observacion_sobrescritura',
+            'riesgo_corregido_por', 'riesgo_corregido_fecha'
+        ])
+
+        nivel_estaba = {-1: 'Sin Contacto', 0: 'Sin Riesgo', 1: 'Bajo', 2: 'Medio', 3: 'Alto'}.get(riesgo_anterior, '?')
+        messages.success(
+            request,
+            f'🙅 Predicción rechazada para {estudiante.nombre}. Riesgo restaurado a: Nivel {nivel_estaba}.'
+        )
+
+    return redirect('estudiante-detail', pk=pk)

@@ -101,7 +101,79 @@
                     </table>
                 </div>
 
-            </div>
+                <div class="card-footer py-4">
+                  {% if is_paginated %}
+                  <nav aria-label="Paginación">
+                    <ul class="pagination justify-content-center mb-0" style="flex-wrap: nowrap;">
+
+                      <!-- Botón: Primera Página -->
+                      {% if page_obj.has_previous %}
+                      <li class="page-item">
+                        <a class="page-link"
+                          href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.carrera %}&carrera={{ request.GET.carrera }}{% endif %}{% if request.GET.tutor %}&tutor={{ request.GET.tutor }}{% endif %}"
+                          tabindex="-1">
+                          <i class="fas fa-angle-double-left"></i>
+                        </a>
+                      </li>
+                      {% else %}
+                      <li class="page-item disabled">
+                        <a class="page-link" href="#" tabindex="-1"><i class="fas fa-angle-double-left"></i></a>
+                      </li>
+                      {% endif %}
+
+                      <!-- Botón: Página Anterior -->
+                      {% if page_obj.has_previous %}
+                      <li class="page-item">
+                        <a class="page-link"
+                          href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.carrera %}&carrera={{ request.GET.carrera }}{% endif %}{% if request.GET.tutor %}&tutor={{ request.GET.tutor }}{% endif %}">
+                          <i class="fas fa-angle-left"></i>
+                        </a>
+                      </li>
+                      {% else %}
+                      <li class="page-item disabled">
+                        <a class="page-link" href="#"><i class="fas fa-angle-left"></i></a>
+                      </li>
+                      {% endif %}
+
+                      <!-- Indicador de Página Actual -->
+                      <li class="page-item disabled" style="margin: 0 10px;">
+                        <span class="page-link" style="background-color: transparent; border: none; color: #8898aa; white-space: nowrap; min-width: 120px; text-align: center;">
+                          Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                        </span>
+                      </li>
+
+                      <!-- Botón: Página Siguiente -->
+                      {% if page_obj.has_next %}
+                      <li class="page-item">
+                        <a class="page-link"
+                          href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.carrera %}&carrera={{ request.GET.carrera }}{% endif %}{% if request.GET.tutor %}&tutor={{ request.GET.tutor }}{% endif %}">
+                          <i class="fas fa-angle-right"></i>
+                        </a>
+                      </li>
+                      {% else %}
+                      <li class="page-item disabled">
+                        <a class="page-link" href="#"><i class="fas fa-angle-right"></i></a>
+                      </li>
+                      {% endif %}
+
+                      <!-- Botón: Última Página -->
+                      {% if page_obj.has_next %}
+                      <li class="page-item">
+                        <a class="page-link"
+                          href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.carrera %}&carrera={{ request.GET.carrera }}{% endif %}{% if request.GET.tutor %}&tutor={{ request.GET.tutor }}{% endif %}">
+                          <i class="fas fa-angle-double-right"></i>
+                        </a>
+                      </li>
+                      {% else %}
+                      <li class="page-item disabled">
+                        <a class="page-link" href="#"><i class="fas fa-angle-double-right"></i></a>
+                      </li>
+                      {% endif %}
+
+                    </ul>
+                  </nav>
+                  {% endif %}
+                </div>
         </div>
     </div>
     {% include "includes/footer.html" %}

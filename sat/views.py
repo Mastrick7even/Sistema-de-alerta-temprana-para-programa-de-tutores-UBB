@@ -29,7 +29,10 @@ class EstudianteListView(LoginRequiredMixin, ListView):
             if perfil.rol.nombre == 'Tutor':
                 # El Tutor solo ve sus asignados
                 queryset = queryset.filter(tutor_asignado=perfil)
-            # El Encargado ve todo (o podrías filtrar por su carrera si quisieras)
+            elif perfil.rol.nombre == 'Encargado de Carrera':
+                # El EC solo ve estudiantes de sus carreras asignadas
+                carreras_ec = Carrera.objects.filter(encargado=perfil)
+                queryset = queryset.filter(carrera__in=carreras_ec)
         except Usuario.DoesNotExist:
             if not user.is_superuser:
                 return Estudiante.objects.none()
@@ -60,7 +63,23 @@ class EstudianteListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['lista_carreras'] = Carrera.objects.all()
+        # Filtrar carreras del dropdown según el rol del usuario
+        user = self.request.user
+        if user.is_superuser:
+            context['lista_carreras'] = Carrera.objects.all()
+        else:
+            try:
+                perfil = Usuario.objects.get(email=user.email)
+                if perfil.rol.nombre == 'Tutor':
+                    # El tutor solo ve la carrera de sus alumnos asignados
+                    ids = Estudiante.objects.filter(tutor_asignado=perfil).values_list('carrera', flat=True).distinct()
+                    context['lista_carreras'] = Carrera.objects.filter(id_carrera__in=ids)
+                elif perfil.rol.nombre == 'Encargado de Carrera':
+                    context['lista_carreras'] = Carrera.objects.filter(encargado=perfil)
+                else:
+                    context['lista_carreras'] = Carrera.objects.all()
+            except Usuario.DoesNotExist:
+                context['lista_carreras'] = Carrera.objects.none()
         
         # Eliminamos lista_estados y creamos una lista estática para la IA
         context['niveles_riesgo_ia'] = [
@@ -78,17 +97,22 @@ class EstudianteDetailView(LoginRequiredMixin, DetailView):
     context_object_name = 'estudiante'
 
     def get_queryset(self):
-
         django_user = self.request.user
 
         if django_user.is_superuser:
             return Estudiante.objects.all()
-        
+
         try:
-            perfil_tutor = Usuario.objects.get(email=django_user.email)
-            return Estudiante.objects.filter(tutor_asignado=perfil_tutor)
+            perfil = Usuario.objects.get(email=django_user.email)
+            if perfil.rol.nombre == 'Tutor':
+                return Estudiante.objects.filter(tutor_asignado=perfil)
+            elif perfil.rol.nombre == 'Encargado de Carrera':
+                carreras_ec = Carrera.objects.filter(encargado=perfil)
+                return Estudiante.objects.filter(carrera__in=carreras_ec)
+            else:
+                return Estudiante.objects.all()
         except Usuario.DoesNotExist:
-            return Estudiante.objects.none
+            return Estudiante.objects.none()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs) 
@@ -203,6 +227,10 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 perfil_usuario = Usuario.objects.get(email=django_user.email)
                 if perfil_usuario.rol.nombre == 'Tutor':
                     mis_estudiantes = Estudiante.objects.filter(tutor_asignado=perfil_usuario)
+                elif perfil_usuario.rol.nombre == 'Encargado de Carrera':
+                    # EC solo ve estudiantes de sus carreras asignadas
+                    carreras_ec = Carrera.objects.filter(encargado=perfil_usuario)
+                    mis_estudiantes = Estudiante.objects.filter(carrera__in=carreras_ec)
                 else:
                     mis_estudiantes = Estudiante.objects.all()
             except Usuario.DoesNotExist:
@@ -255,7 +283,21 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context['kpi_ghosting'] = riesgo_ghosting
         
         context['ultimas_bitacoras'] = ultimas_bitacoras
-        context['lista_carreras_dashboard'] = Carrera.objects.all()
+        # Filtrar lista de carreras del dashboard según rol
+        if django_user.is_superuser:
+            context['lista_carreras_dashboard'] = Carrera.objects.all()
+        else:
+            try:
+                perfil_dash = Usuario.objects.get(email=django_user.email)
+                if perfil_dash.rol.nombre == 'Encargado de Carrera':
+                    context['lista_carreras_dashboard'] = Carrera.objects.filter(encargado=perfil_dash)
+                elif perfil_dash.rol.nombre == 'Tutor':
+                    ids_c = mis_estudiantes.values_list('carrera', flat=True).distinct()
+                    context['lista_carreras_dashboard'] = Carrera.objects.filter(id_carrera__in=ids_c)
+                else:
+                    context['lista_carreras_dashboard'] = Carrera.objects.all()
+            except Usuario.DoesNotExist:
+                context['lista_carreras_dashboard'] = Carrera.objects.none()
         context['lista_alertas'] = TipoAlarma.objects.all()
 
         # Datos para el gráfico [Alto, Medio, Bajo, Sano, Ghosting]
@@ -521,7 +563,9 @@ class ReporteAsistenciaView(LoginRequiredMixin, ListView):
                 perfil = Usuario.objects.get(email=user.email)
                 if perfil.rol.nombre == 'Tutor':
                     queryset = queryset.filter(tutor_asignado=perfil)
-                # Si es Encargado, ve todo (o podrías filtrar por su carrera si quisieras)
+                elif perfil.rol.nombre == 'Encargado de Carrera':
+                    carreras_ec = Carrera.objects.filter(encargado=perfil)
+                    queryset = queryset.filter(carrera__in=carreras_ec)
             except Usuario.DoesNotExist:
                 return Estudiante.objects.none()
 
@@ -551,22 +595,32 @@ class ReporteAsistenciaView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Pasamos datos para los filtros select
-        context['carreras'] = Carrera.objects.all()
-        
-        # Solo pasamos lista de tutores si el usuario es Encargado o superuser
-        es_tutor = False
-        if not self.request.user.is_superuser:
-            try:
-                perfil = Usuario.objects.get(email=self.request.user.email)
-                if perfil.rol.nombre == 'Tutor':
-                    es_tutor = True
-            except Usuario.DoesNotExist:
-                pass
-        
-        if not es_tutor:
+        user = self.request.user
+
+        # Filtrar carreras y tutores según el rol
+        if user.is_superuser:
+            context['carreras'] = Carrera.objects.all()
             context['tutores'] = Usuario.objects.filter(rol__nombre='Tutor')
-        
+        else:
+            try:
+                perfil = Usuario.objects.get(email=user.email)
+                if perfil.rol.nombre == 'Tutor':
+                    # El tutor no necesita dropdown de carreras ni tutores
+                    ids_c = Estudiante.objects.filter(tutor_asignado=perfil).values_list('carrera', flat=True).distinct()
+                    context['carreras'] = Carrera.objects.filter(id_carrera__in=ids_c)
+                elif perfil.rol.nombre == 'Encargado de Carrera':
+                    carreras_ec = Carrera.objects.filter(encargado=perfil)
+                    context['carreras'] = carreras_ec
+                    # Solo tutores de las carreras del EC
+                    context['tutores'] = Usuario.objects.filter(
+                        rol__nombre='Tutor', carrera__in=carreras_ec
+                    )
+                else:
+                    context['carreras'] = Carrera.objects.all()
+                    context['tutores'] = Usuario.objects.filter(rol__nombre='Tutor')
+            except Usuario.DoesNotExist:
+                context['carreras'] = Carrera.objects.none()
+
         return context
 
 class DetalleAsistenciaEstudianteView(LoginRequiredMixin, DetailView):

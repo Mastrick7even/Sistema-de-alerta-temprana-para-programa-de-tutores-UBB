@@ -112,12 +112,55 @@
               <span class="nav-link-text">Register (template)</span>
             </a>
           </li> -->
+
+          <!-- Sección Administración (solo superuser) -->
+          {% if request.user.is_superuser %}
+          <li class="nav-item">
+            <hr class="my-3">
+            <h6 class="navbar-heading p-0 text-muted">
+              <span class="docs-normal">Administración</span>
+            </h6>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if request.path == '/admin-sat/' %}active{% endif %}"
+              href="{% url 'admin-panel' %}">
+              <i class="ni ni-settings-gear-65 text-primary"></i>
+              <span class="nav-link-text">Panel Admin</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if 'admin-sat/usuarios' in request.path %}active{% endif %}"
+              href="{% url 'admin-usuario-list' %}">
+              <i class="ni ni-single-02 text-primary"></i>
+              <span class="nav-link-text">Usuarios</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if 'admin-sat/carreras' in request.path %}active{% endif %}"
+              href="{% url 'admin-carrera-list' %}">
+              <i class="ni ni-hat-3 text-primary"></i>
+              <span class="nav-link-text">Carreras</span>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if 'admin-sat/maestras' in request.path %}active{% endif %}"
+              href="{% url 'admin-maestras' %}">
+              <i class="ni ni-bullet-list-67 text-primary"></i>
+              <span class="nav-link-text">Tablas Maestras</span>
+            </a>
+          </li>
+          {% endif %}
+
+          <li class="nav-item">
+            <hr class="my-3">
+          </li>
           <li class="nav-item">
             <a class="nav-link" href="{% url 'logout' %}">
               <i class="ni ni-user-run text-red"></i>
               <span class="nav-link-text">Cerrar Sesión</span>
             </a>
           </li>
+
 
           {% endwith %}
           {% endif %}

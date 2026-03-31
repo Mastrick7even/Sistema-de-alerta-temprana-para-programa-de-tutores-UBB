@@ -4,7 +4,11 @@ from .views import (
     DashboardView, ReporteEstudiantePDF, MisTutoriasView, tomar_asistencia, TutoriaCreateView, TutoriaUpdateView, TutoriaDeleteView, 
     leer_notificacion, todas_notificaciones, marcar_notificaciones_leidas, eliminar_notificaciones, ReporteAsistenciaView,
     DetalleAsistenciaEstudianteView, sobrescribir_riesgo, eliminar_historial_riesgo,
-    recalcular_riesgo_estudiante, recalcular_riesgo_masivo, confirmar_prediccion_ia, rechazar_prediccion_ia
+    recalcular_riesgo_estudiante, recalcular_riesgo_masivo, confirmar_prediccion_ia, rechazar_prediccion_ia,
+    # Bloque 2: Admin CRUD
+    AdminPanelView, AdminUsuarioListView, admin_usuario_create, admin_usuario_edit, admin_usuario_toggle,
+    AdminCarreraListView, admin_carrera_create, admin_carrera_edit, admin_carrera_delete,
+    admin_maestras, admin_maestra_accion, admin_generar_password,
 )
 
 urlpatterns = [
@@ -33,4 +37,20 @@ urlpatterns = [
     path('recalcular-riesgo-masivo/', recalcular_riesgo_masivo, name='recalcular-riesgo-masivo'),
     path('estudiantes/<int:pk>/confirmar-prediccion/', confirmar_prediccion_ia, name='confirmar-prediccion-ia'),
     path('estudiantes/<int:pk>/rechazar-prediccion/', rechazar_prediccion_ia, name='rechazar-prediccion-ia'),
+
+    # ── Bloque 2: CRUD Administrativo (solo superuser) ────────────────
+    path('admin-sat/', AdminPanelView.as_view(), name='admin-panel'),
+    path('admin-sat/usuarios/', AdminUsuarioListView.as_view(), name='admin-usuario-list'),
+    path('admin-sat/usuarios/nuevo/', admin_usuario_create, name='admin-usuario-create'),
+    path('admin-sat/usuarios/<int:pk>/editar/', admin_usuario_edit, name='admin-usuario-edit'),
+    path('admin-sat/usuarios/<int:pk>/toggle/', admin_usuario_toggle, name='admin-usuario-toggle'),
+    path('admin-sat/usuarios/generar-password/', admin_generar_password, name='admin-generar-password'),
+    path('admin-sat/carreras/', AdminCarreraListView.as_view(), name='admin-carrera-list'),
+    path('admin-sat/carreras/nueva/', admin_carrera_create, name='admin-carrera-create'),
+    path('admin-sat/carreras/<int:pk>/editar/', admin_carrera_edit, name='admin-carrera-edit'),
+    path('admin-sat/carreras/<int:pk>/eliminar/', admin_carrera_delete, name='admin-carrera-delete'),
+    path('admin-sat/maestras/', admin_maestras, name='admin-maestras'),
+    path('admin-sat/maestras/<str:modelo>/', admin_maestra_accion, name='admin-maestra-crear'),
+    path('admin-sat/maestras/<str:modelo>/<int:pk>/', admin_maestra_accion, name='admin-maestra-editar'),
 ]
+

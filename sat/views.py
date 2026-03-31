@@ -1,16 +1,29 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.mixins import LoginRequiredMixin # Obliga a estar logueado
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.urls import reverse_lazy
 from django.db.models import Count, Q, Case, When, IntegerField
+from django.db import transaction
 from django.template.loader import render_to_string
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseForbidden
 from django.conf import settings
 from django.contrib import messages
-import os
+from django.views import View
+import os, secrets, string
+from django.core.paginator import Paginator
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
-from .models import Estudiante, Usuario, Bitacora, Estado, Carrera, TipoAlarma, Tutoria, Asistencia, Notificacion, HistorialRiesgo
-from .forms import BitacoraForm, TutoriaForm
+from .models import (
+    Estudiante, Usuario, Bitacora, Estado, Carrera, TipoAlarma, Tutoria,
+    Asistencia, Notificacion, HistorialRiesgo, Rol, TipoTutoria,
+    ClasificacionTutoria, TipoDesercion
+)
+from .forms import (
+    BitacoraForm, TutoriaForm,
+    UsuarioAdminForm, CarreraAdminForm,
+    TipoAlarmaForm, TipoTutoriaForm, ClasificacionTutoriaForm,
+    TipoDesercionForm, EstadoForm
+)
 
 class EstudianteListView(LoginRequiredMixin, ListView):
     model = Estudiante
@@ -948,3 +961,336 @@ def rechazar_prediccion_ia(request, pk):
         )
 
     return redirect('estudiante-detail', pk=pk)
+
+
+# ═══════════════════════════════════════════════════════════════════
+# BLOQUE 2: CRUD ADMINISTRATIVO (solo superuser)
+# ═══════════════════════════════════════════════════════════════════
+
+class SuperuserRequiredMixin:
+    """Mixin que restringe el acceso solo a superusers."""
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated or not request.user.is_superuser:
+            messages.error(request, '⛔ No tienes permiso para acceder a esa sección.')
+            return redirect('home')
+        return super().dispatch(request, *args, **kwargs)
+
+
+def superuser_required(view_func):
+    """Decorador equivalente para vistas de función."""
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated or not request.user.is_superuser:
+            messages.error(request, '⛔ No tienes permiso para acceder a esa sección.')
+            return redirect('home')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+# ── Panel principal de administración ─────────────────────────────
+class AdminPanelView(SuperuserRequiredMixin, LoginRequiredMixin, TemplateView):
+    template_name = 'sat/admin/admin_panel.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['total_usuarios'] = Usuario.objects.count()
+        context['total_carreras'] = Carrera.objects.count()
+        context['total_ec'] = Usuario.objects.filter(rol__nombre='Encargado de Carrera').count()
+        context['total_tutores'] = Usuario.objects.filter(rol__nombre='Tutor').count()
+        context['total_tipo_alarma'] = TipoAlarma.objects.count()
+        context['total_tipo_tutoria'] = TipoTutoria.objects.count()
+        context['total_clasificacion'] = ClasificacionTutoria.objects.count()
+        return context
+
+
+# ── CRUD Usuarios ──────────────────────────────────────────────────
+class AdminUsuarioListView(SuperuserRequiredMixin, LoginRequiredMixin, TemplateView):
+    template_name = 'sat/admin/admin_usuario_list.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        qs = Usuario.objects.select_related('rol', 'carrera').order_by('rol__nombre', 'apellido')
+
+        rol_filter = self.request.GET.get('rol')
+        carrera_filter = self.request.GET.get('carrera')
+        q = self.request.GET.get('q')
+
+        if rol_filter:
+            qs = qs.filter(rol__id_rol=rol_filter)
+        if carrera_filter:
+            qs = qs.filter(carrera__id_carrera=carrera_filter)
+        if q:
+            qs = qs.filter(Q(nombre__icontains=q) | Q(apellido__icontains=q) | Q(email__icontains=q))
+
+        # Anotar si el auth.User está activo
+        usuarios_data = []
+        for u in qs:
+            auth_user = User.objects.filter(email=u.email).first()
+            usuarios_data.append({
+                'perfil': u,
+                'activo': auth_user.is_active if auth_user else None,
+                'username': auth_user.username if auth_user else '—',
+                'is_superuser': auth_user.is_superuser if auth_user else False,
+            })
+
+        # Paginación
+        paginator = Paginator(usuarios_data, 20)
+        page_number = self.request.GET.get('page', 1)
+        page_obj = paginator.get_page(page_number)
+
+        context['page_obj'] = page_obj
+        context['is_paginated'] = paginator.num_pages > 1
+        context['roles'] = Rol.objects.all()
+        context['carreras'] = Carrera.objects.all()
+        return context
+
+
+@superuser_required
+@login_required
+def admin_usuario_create(request):
+    if request.method == 'POST':
+        form = UsuarioAdminForm(request.POST)
+        if form.is_valid():
+            cd = form.cleaned_data
+            pw = cd['password'].strip()
+            if not pw:
+                messages.error(request, 'Debes ingresar una contraseña para un usuario nuevo.')
+                return render(request, 'sat/admin/admin_usuario_form.html', {'form': form, 'accion': 'Crear'})
+            try:
+                with transaction.atomic():
+                    auth_user = User.objects.create_user(
+                        username=cd['username'],
+                        email=cd['email'],
+                        password=pw,
+                        first_name=cd['nombre'],
+                        last_name=cd['apellido'],
+                    )
+                    Usuario.objects.create(
+                        rut=cd['rut'],
+                        nombre=cd['nombre'],
+                        apellido=cd['apellido'],
+                        email=cd['email'],
+                        password='managed-by-django-auth',
+                        rol=cd['rol'],
+                        carrera=cd.get('carrera'),
+                    )
+                messages.success(request, f'✅ Usuario {cd["username"]} creado correctamente.')
+                return redirect('admin-usuario-list')
+            except Exception as e:
+                messages.error(request, f'Error al crear usuario: {e}')
+    else:
+        form = UsuarioAdminForm()
+    return render(request, 'sat/admin/admin_usuario_form.html', {'form': form, 'accion': 'Crear'})
+
+
+@superuser_required
+@login_required
+def admin_usuario_edit(request, pk):
+    perfil = get_object_or_404(Usuario, pk=pk)
+    auth_user = User.objects.filter(email=perfil.email).first()
+
+    if request.method == 'POST':
+        form = UsuarioAdminForm(request.POST)
+        if form.is_valid():
+            cd = form.cleaned_data
+            try:
+                with transaction.atomic():
+                    # Actualizar sat.Usuario
+                    perfil.nombre   = cd['nombre']
+                    perfil.apellido = cd['apellido']
+                    perfil.rut      = cd['rut']
+                    perfil.email    = cd['email']
+                    perfil.rol      = cd['rol']
+                    perfil.carrera  = cd.get('carrera')
+                    perfil.save()
+                    # Actualizar auth.User
+                    if auth_user:
+                        auth_user.first_name = cd['nombre']
+                        auth_user.last_name  = cd['apellido']
+                        auth_user.email      = cd['email']
+                        auth_user.username   = cd['username']
+                        if cd['password']:
+                            auth_user.set_password(cd['password'])
+                        auth_user.save()
+                messages.success(request, f'✅ Usuario {perfil.get_full_name()} actualizado.')
+                return redirect('admin-usuario-list')
+            except Exception as e:
+                messages.error(request, f'Error al actualizar: {e}')
+    else:
+        form = UsuarioAdminForm(initial={
+            'nombre':   perfil.nombre,
+            'apellido': perfil.apellido,
+            'rut':      perfil.rut,
+            'email':    perfil.email,
+            'username': auth_user.username if auth_user else '',
+            'rol':      perfil.rol,
+            'carrera':  perfil.carrera,
+        })
+    return render(request, 'sat/admin/admin_usuario_form.html', {
+        'form': form, 'accion': 'Editar', 'perfil': perfil
+    })
+
+
+@superuser_required
+@login_required
+def admin_usuario_toggle(request, pk):
+    """Activa / Desactiva el login de un usuario (no lo borra)."""
+    perfil = get_object_or_404(Usuario, pk=pk)
+    auth_user = User.objects.filter(email=perfil.email).first()
+    if auth_user:
+        if auth_user.is_superuser:
+            messages.error(request, '⛔ No puedes desactivar al superuser.')
+        else:
+            auth_user.is_active = not auth_user.is_active
+            auth_user.save()
+            estado = 'activado' if auth_user.is_active else 'desactivado'
+            messages.success(request, f'Usuario {perfil.get_full_name()} {estado}.')
+    return redirect('admin-usuario-list')
+
+
+@superuser_required
+@login_required
+def admin_generar_password(request):
+    """Genera una contraseña segura aleatoria y la devuelve como JSON."""
+    from django.http import JsonResponse
+    alphabet = string.ascii_letters + string.digits + '!@#$%&'
+    pw = ''.join(secrets.choice(alphabet) for _ in range(12))
+    return JsonResponse({'password': pw})
+
+
+# ── CRUD Carreras ──────────────────────────────────────────────────
+class AdminCarreraListView(SuperuserRequiredMixin, LoginRequiredMixin, TemplateView):
+    template_name = 'sat/admin/admin_carrera_list.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        carreras = Carrera.objects.select_related('encargado').order_by('nombre')
+        carrera_data = []
+        for c in carreras:
+            total_alumnos = Estudiante.objects.filter(carrera=c).count()
+            total_tutores = Usuario.objects.filter(rol__nombre='Tutor', carrera=c).count()
+            carrera_data.append({
+                'carrera': c,
+                'total_alumnos': total_alumnos,
+                'total_tutores': total_tutores,
+                'puede_eliminar': total_alumnos == 0,
+            })
+
+        # Paginación
+        paginator = Paginator(carrera_data, 15)
+        page_number = self.request.GET.get('page', 1)
+        page_obj = paginator.get_page(page_number)
+
+        context['page_obj'] = page_obj
+        context['is_paginated'] = paginator.num_pages > 1
+        return context
+
+
+@superuser_required
+@login_required
+def admin_carrera_create(request):
+    if request.method == 'POST':
+        form = CarreraAdminForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'✅ Carrera "{form.cleaned_data["nombre"]}" creada.')
+            return redirect('admin-carrera-list')
+    else:
+        form = CarreraAdminForm()
+    return render(request, 'sat/admin/admin_carrera_form.html', {'form': form, 'accion': 'Crear'})
+
+
+@superuser_required
+@login_required
+def admin_carrera_edit(request, pk):
+    carrera = get_object_or_404(Carrera, pk=pk)
+    if request.method == 'POST':
+        form = CarreraAdminForm(request.POST, instance=carrera)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'✅ Carrera "{carrera.nombre}" actualizada.')
+            return redirect('admin-carrera-list')
+    else:
+        form = CarreraAdminForm(instance=carrera)
+    return render(request, 'sat/admin/admin_carrera_form.html', {
+        'form': form, 'accion': 'Editar', 'carrera': carrera
+    })
+
+
+@superuser_required
+@login_required
+def admin_carrera_delete(request, pk):
+    carrera = get_object_or_404(Carrera, pk=pk)
+    if Estudiante.objects.filter(carrera=carrera).exists():
+        messages.error(request, f'⛔ No se puede eliminar "{carrera.nombre}" porque tiene estudiantes asociados.')
+        return redirect('admin-carrera-list')
+    if request.method == 'POST':
+        nombre = carrera.nombre
+        carrera.delete()
+        messages.success(request, f'🗑️ Carrera "{nombre}" eliminada.')
+        return redirect('admin-carrera-list')
+    return render(request, 'sat/admin/admin_carrera_confirm_delete.html', {'carrera': carrera})
+
+
+# ── Tablas Maestras (panel unificado) ──────────────────────────────
+@superuser_required
+@login_required
+def admin_maestras(request):
+    context = {
+        'tipos_alarma': TipoAlarma.objects.all().order_by('nombre'),
+        'tipos_tutoria': TipoTutoria.objects.all().order_by('nombre'),
+        'clasificaciones': ClasificacionTutoria.objects.all().order_by('nombre'),
+        'tipos_desercion': TipoDesercion.objects.all().order_by('causa'),
+        'estados': Estado.objects.all().order_by('nombre'),
+        'forma_alarma': TipoAlarmaForm(),
+        'forma_tutoria': TipoTutoriaForm(),
+        'forma_clasificacion': ClasificacionTutoriaForm(),
+        'forma_desercion': TipoDesercionForm(),
+        'forma_estado': EstadoForm(),
+    }
+    return render(request, 'sat/admin/admin_maestras.html', context)
+
+
+@superuser_required
+@login_required
+def admin_maestra_accion(request, modelo, pk=None):
+    """
+    Vista unificada para crear/editar/eliminar cualquier tabla maestra.
+    modelo: 'tipo-alarma' | 'tipo-tutoria' | 'clasificacion' | 'tipo-desercion' | 'estado'
+    """
+    MODEL_MAP = {
+        'tipo-alarma':    (TipoAlarma,          TipoAlarmaForm,          'id_tipo',          'nombre'),
+        'tipo-tutoria':   (TipoTutoria,         TipoTutoriaForm,         'id_tipo',          'nombre'),
+        'clasificacion':  (ClasificacionTutoria, ClasificacionTutoriaForm,'id_clasificacion', 'nombre'),
+        'tipo-desercion': (TipoDesercion,        TipoDesercionForm,       'id_tipo_desercion','causa'),
+        'estado':         (Estado,               EstadoForm,              'id_estado',        'nombre'),
+    }
+    if modelo not in MODEL_MAP:
+        messages.error(request, 'Modelo no reconocido.')
+        return redirect('admin-maestras')
+
+    ModelClass, FormClass, pk_field, label_field = MODEL_MAP[modelo]
+    accion = request.POST.get('accion') or request.GET.get('accion', 'crear')
+
+    if accion == 'eliminar' and pk:
+        obj = get_object_or_404(ModelClass, **{pk_field: pk})
+        try:
+            nombre_obj = getattr(obj, label_field)
+            obj.delete()
+            messages.success(request, f'🗑️ Eliminado: "{nombre_obj}".')
+        except Exception as e:
+            messages.error(request, f'No se puede eliminar: {e}')
+        return redirect('admin-maestras')
+
+    if pk:
+        obj = get_object_or_404(ModelClass, **{pk_field: pk})
+        form = FormClass(request.POST or None, instance=obj)
+    else:
+        form = FormClass(request.POST or None)
+
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, '✅ Guardado correctamente.')
+        return redirect('admin-maestras')
+
+    messages.error(request, 'Formulario con errores. Verifica los campos.')
+    return redirect('admin-maestras')

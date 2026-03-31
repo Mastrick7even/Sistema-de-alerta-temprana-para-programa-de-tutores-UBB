@@ -1,0 +1,328 @@
+{% extends 'layouts/base.html' %}
+{% block content %}
+<div class="header bg-primary pb-6">
+  <div class="container-fluid">
+    <div class="header-body">
+      <div class="row align-items-center py-4">
+        <div class="col">
+          <h6 class="h2 text-white d-inline-block mb-0">Tablas Maestras</h6>
+          <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
+            <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
+              <li class="breadcrumb-item"><a href="{% url 'admin-panel' %}" class="text-white">Admin</a></li>
+              <li class="breadcrumb-item active">Tablas Maestras</li>
+            </ol>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid mt--6">
+  <div class="row">
+
+    <!-- Tipos de Alarma -->
+    <div class="col-lg-6 mb-4">
+      <div class="card h-100">
+        <div class="card-header bg-white border-0 d-flex align-items-center">
+          <div class="icon icon-shape bg-gradient-danger text-white rounded-circle mr-3" style="width:36px;height:36px;">
+            <i class="fas fa-bell" style="font-size:.8rem;"></i>
+          </div>
+          <h3 class="mb-0">Tipos de Alarma</h3>
+          <span class="badge badge-danger ml-auto">{{ tipos_alarma|length }}</span>
+        </div>
+        <div class="card-body p-0">
+          <ul class="list-group list-group-flush">
+            {% for obj in tipos_alarma %}
+            <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-2">
+              <span>{{ obj.nombre }}</span>
+              <div>
+                <button class="btn btn-xs btn-neutral"
+                  onclick="abrirEditar('tipo-alarma', {{ obj.id_tipo }}, '{{ obj.nombre|escapejs }}')">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-xs btn-outline-danger"
+                  onclick="abrirEliminar('{% url "admin-maestra-editar" "tipo-alarma" obj.id_tipo %}', '{{ obj.nombre|escapejs }}')">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </li>
+            {% empty %}
+            <li class="list-group-item text-muted text-center py-3">Sin registros</li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div class="card-footer bg-white">
+          <form method="POST" action="{% url 'admin-maestra-crear' 'tipo-alarma' %}" class="form-inline">
+            {% csrf_token %}
+            {{ forma_alarma.nombre }}
+            <button type="submit" class="btn btn-sm btn-primary ml-2">
+              <i class="fas fa-plus"></i> Agregar
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tipos de Tutoría -->
+    <div class="col-lg-6 mb-4">
+      <div class="card h-100">
+        <div class="card-header bg-white border-0 d-flex align-items-center">
+          <div class="icon icon-shape bg-gradient-info text-white rounded-circle mr-3" style="width:36px;height:36px;">
+            <i class="fas fa-book" style="font-size:.8rem;"></i>
+          </div>
+          <h3 class="mb-0">Tipos de Tutoría</h3>
+          <span class="badge badge-info ml-auto">{{ tipos_tutoria|length }}</span>
+        </div>
+        <div class="card-body p-0">
+          <ul class="list-group list-group-flush">
+            {% for obj in tipos_tutoria %}
+            <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-2">
+              <span>{{ obj.nombre }}</span>
+              <div>
+                <button class="btn btn-xs btn-neutral"
+                  onclick="abrirEditar('tipo-tutoria', {{ obj.id_tipo }}, '{{ obj.nombre|escapejs }}')">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-xs btn-outline-danger"
+                  onclick="abrirEliminar('{% url "admin-maestra-editar" "tipo-tutoria" obj.id_tipo %}', '{{ obj.nombre|escapejs }}')">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </li>
+            {% empty %}
+            <li class="list-group-item text-muted text-center py-3">Sin registros</li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div class="card-footer bg-white">
+          <form method="POST" action="{% url 'admin-maestra-crear' 'tipo-tutoria' %}" class="form-inline">
+            {% csrf_token %}
+            {{ forma_tutoria.nombre }}
+            <button type="submit" class="btn btn-sm btn-primary ml-2">
+              <i class="fas fa-plus"></i> Agregar
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Clasificaciones de Tutoría -->
+    <div class="col-lg-6 mb-4">
+      <div class="card h-100">
+        <div class="card-header bg-white border-0 d-flex align-items-center">
+          <div class="icon icon-shape bg-gradient-success text-white rounded-circle mr-3" style="width:36px;height:36px;">
+            <i class="fas fa-tags" style="font-size:.8rem;"></i>
+          </div>
+          <h3 class="mb-0">Clasificaciones de Tutoría</h3>
+          <span class="badge badge-success ml-auto">{{ clasificaciones|length }}</span>
+        </div>
+        <div class="card-body p-0">
+          <ul class="list-group list-group-flush">
+            {% for obj in clasificaciones %}
+            <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-2">
+              <span>{{ obj.nombre }}</span>
+              <div>
+                <button class="btn btn-xs btn-neutral"
+                  onclick="abrirEditar('clasificacion', {{ obj.id_clasificacion }}, '{{ obj.nombre|escapejs }}')">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-xs btn-outline-danger"
+                  onclick="abrirEliminar('{% url "admin-maestra-editar" "clasificacion" obj.id_clasificacion %}', '{{ obj.nombre|escapejs }}')">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </li>
+            {% empty %}
+            <li class="list-group-item text-muted text-center py-3">Sin registros</li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div class="card-footer bg-white">
+          <form method="POST" action="{% url 'admin-maestra-crear' 'clasificacion' %}" class="form-inline">
+            {% csrf_token %}
+            {{ forma_clasificacion.nombre }}
+            <button type="submit" class="btn btn-sm btn-primary ml-2">
+              <i class="fas fa-plus"></i> Agregar
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tipos de Deserción -->
+    <div class="col-lg-6 mb-4">
+      <div class="card h-100">
+        <div class="card-header bg-white border-0 d-flex align-items-center">
+          <div class="icon icon-shape bg-gradient-warning text-white rounded-circle mr-3" style="width:36px;height:36px;">
+            <i class="fas fa-door-open" style="font-size:.8rem;"></i>
+          </div>
+          <h3 class="mb-0">Tipos de Deserción</h3>
+          <span class="badge badge-warning ml-auto">{{ tipos_desercion|length }}</span>
+        </div>
+        <div class="card-body p-0">
+          <ul class="list-group list-group-flush">
+            {% for obj in tipos_desercion %}
+            <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-2">
+              <span>{{ obj.causa }}</span>
+              <div>
+                <button class="btn btn-xs btn-neutral"
+                  onclick="abrirEditar('tipo-desercion', {{ obj.id_tipo_desercion }}, '{{ obj.causa|escapejs }}')">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-xs btn-outline-danger"
+                  onclick="abrirEliminar('{% url "admin-maestra-editar" "tipo-desercion" obj.id_tipo_desercion %}', '{{ obj.causa|escapejs }}')">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </li>
+            {% empty %}
+            <li class="list-group-item text-muted text-center py-3">Sin registros</li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div class="card-footer bg-white">
+          <form method="POST" action="{% url 'admin-maestra-crear' 'tipo-desercion' %}" class="form-inline">
+            {% csrf_token %}
+            {{ forma_desercion.causa }}
+            <button type="submit" class="btn btn-sm btn-primary ml-2">
+              <i class="fas fa-plus"></i> Agregar
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Estados de Estudiante -->
+    <div class="col-lg-6 mb-4">
+      <div class="card h-100">
+        <div class="card-header bg-white border-0 d-flex align-items-center">
+          <div class="icon icon-shape bg-gradient-primary text-white rounded-circle mr-3" style="width:36px;height:36px;">
+            <i class="fas fa-flag" style="font-size:.8rem;"></i>
+          </div>
+          <h3 class="mb-0">Estados de Estudiante</h3>
+          <span class="badge badge-primary ml-auto">{{ estados|length }}</span>
+        </div>
+        <div class="card-body p-0">
+          <ul class="list-group list-group-flush">
+            {% for obj in estados %}
+            <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-2">
+              <span>{{ obj.nombre }}</span>
+              <div>
+                <button class="btn btn-xs btn-neutral"
+                  onclick="abrirEditar('estado', {{ obj.id_estado }}, '{{ obj.nombre|escapejs }}')">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-xs btn-outline-danger"
+                  onclick="abrirEliminar('{% url "admin-maestra-editar" "estado" obj.id_estado %}', '{{ obj.nombre|escapejs }}')">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </li>
+            {% empty %}
+            <li class="list-group-item text-muted text-center py-3">Sin registros</li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div class="card-footer bg-white">
+          <form method="POST" action="{% url 'admin-maestra-crear' 'estado' %}" class="form-inline">
+            {% csrf_token %}
+            {{ forma_estado.nombre }}
+            <button type="submit" class="btn btn-sm btn-primary ml-2">
+              <i class="fas fa-plus"></i> Agregar
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- fin row -->
+
+
+  <!-- ══ MODAL: Editar registro ══════════════════════════════════ -->
+  <div class="modal fade" id="modal-editar" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
+      <div class="modal-content">
+        <form method="POST" id="form-editar">
+          {% csrf_token %}
+          <div class="modal-header bg-primary text-white py-3">
+            <h5 class="modal-title text-white mb-0"><i class="fas fa-edit mr-2"></i>Editar</h5>
+            <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+          </div>
+          <div class="modal-body">
+            <label class="form-control-label">Nuevo nombre</label>
+            <input type="text" name="nombre" id="input-editar" class="form-control" required>
+            <input type="hidden" name="causa" id="input-editar-causa">
+          </div>
+          <div class="modal-footer py-2">
+            <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="fas fa-save mr-1"></i>Guardar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ MODAL: Confirmar eliminación ═══════════════════════════ -->
+  <div class="modal fade" id="modal-eliminar" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
+      <div class="modal-content border-danger">
+        <div class="modal-header bg-gradient-danger text-white py-3">
+          <h5 class="modal-title text-white mb-0">
+            <i class="fas fa-exclamation-triangle mr-2"></i>Confirmar eliminación
+          </h5>
+          <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+        </div>
+        <div class="modal-body text-center py-4">
+          <p class="mb-1">¿Estás seguro de que deseas eliminar?</p>
+          <h5 class="font-weight-bold text-danger" id="eliminar-nombre">—</h5>
+          <small class="text-muted">Esta acción no se puede deshacer.</small>
+        </div>
+        <div class="modal-footer py-2 justify-content-center">
+          <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+            <i class="fas fa-times mr-1"></i>Cancelar
+          </button>
+          <form method="POST" id="form-eliminar" class="d-inline">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="eliminar">
+            <button type="submit" class="btn btn-danger btn-sm">
+              <i class="fas fa-trash mr-1"></i>Sí, eliminar
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% include "includes/footer.html" %}
+</div>
+
+{% endblock %}
+
+{% block javascripts %}
+<script>
+// ── Abrir modal de EDICIÓN ──────────────────────────────────────
+function abrirEditar(modelo, pk, valorActual) {
+  const urls = {
+    'tipo-alarma':    `/admin-sat/maestras/tipo-alarma/${pk}/`,
+    'tipo-tutoria':   `/admin-sat/maestras/tipo-tutoria/${pk}/`,
+    'clasificacion':  `/admin-sat/maestras/clasificacion/${pk}/`,
+    'tipo-desercion': `/admin-sat/maestras/tipo-desercion/${pk}/`,
+    'estado':         `/admin-sat/maestras/estado/${pk}/`,
+  };
+  document.getElementById('form-editar').action = urls[modelo];
+  document.getElementById('input-editar').value = valorActual;
+  document.getElementById('input-editar-causa').value = valorActual;
+  $('#modal-editar').modal('show');
+}
+
+// ── Abrir modal de ELIMINACIÓN ──────────────────────────────────
+function abrirEliminar(url, nombre) {
+  document.getElementById('eliminar-nombre').textContent = nombre;
+  document.getElementById('form-eliminar').action = url;
+  $('#modal-eliminar').modal('show');
+}
+</script>
+{% endblock %}

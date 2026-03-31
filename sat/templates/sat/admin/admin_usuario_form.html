@@ -1,0 +1,194 @@
+{% extends 'layouts/base.html' %}
+{% block content %}
+<div class="header bg-primary pb-6">
+  <div class="container-fluid">
+    <div class="header-body">
+      <div class="row align-items-center py-4">
+        <div class="col">
+          <h6 class="h2 text-white d-inline-block mb-0">{{ accion }} Usuario</h6>
+          <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
+            <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
+              <li class="breadcrumb-item"><a href="{% url 'admin-panel' %}" class="text-white">Admin</a></li>
+              <li class="breadcrumb-item"><a href="{% url 'admin-usuario-list' %}" class="text-white">Usuarios</a></li>
+              <li class="breadcrumb-item active">{{ accion }}</li>
+            </ol>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid mt--6">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header bg-white border-0">
+          <div class="row align-items-center">
+            <div class="col-8">
+              <h3 class="mb-0">{{ accion }} Usuario {% if perfil %}<small class="text-muted">— {{ perfil.nombre }} {{ perfil.apellido }}</small>{% endif %}</h3>
+            </div>
+            <div class="col-4 text-right">
+              <a href="{% url 'admin-usuario-list' %}" class="btn btn-sm btn-neutral">
+                <i class="fas fa-arrow-left mr-1"></i> Volver
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body">
+          <form method="POST" id="form-usuario">
+            {% csrf_token %}
+            <div class="row">
+              <!-- Nombre y Apellido -->
+              <div class="col-md-6 form-group">
+                <label class="form-control-label">Nombre <span class="text-danger">*</span></label>
+                {{ form.nombre }}
+                {% if form.nombre.errors %}<small class="text-danger">{{ form.nombre.errors.0 }}</small>{% endif %}
+              </div>
+              <div class="col-md-6 form-group">
+                <label class="form-control-label">Apellido <span class="text-danger">*</span></label>
+                {{ form.apellido }}
+                {% if form.apellido.errors %}<small class="text-danger">{{ form.apellido.errors.0 }}</small>{% endif %}
+              </div>
+              <!-- RUT y Email -->
+              <div class="col-md-6 form-group">
+                <label class="form-control-label">RUT <span class="text-danger">*</span></label>
+                {{ form.rut }}
+                {% if form.rut.errors %}<small class="text-danger">{{ form.rut.errors.0 }}</small>{% endif %}
+              </div>
+              <div class="col-md-6 form-group">
+                <label class="form-control-label">Email <span class="text-danger">*</span></label>
+                {{ form.email }}
+                {% if form.email.errors %}<small class="text-danger">{{ form.email.errors.0 }}</small>{% endif %}
+              </div>
+              <!-- Username -->
+              <div class="col-md-6 form-group">
+                <label class="form-control-label">Username (login) <span class="text-danger">*</span></label>
+                {{ form.username }}
+                {% if form.username.errors %}<small class="text-danger">{{ form.username.errors.0 }}</small>{% endif %}
+              </div>
+              <!-- Contraseña -->
+              <div class="col-md-6 form-group">
+                <label class="form-control-label">
+                  Contraseña {% if accion == 'Crear' %}<span class="text-danger">*</span>{% endif %}
+                </label>
+                <div class="input-group">
+                  {{ form.password }}
+                  <div class="input-group-append">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-generar-pw"
+                      title="Generar contraseña segura">
+                      <i class="fas fa-dice"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-ver-pw"
+                      title="Mostrar/ocultar">
+                      <i class="fas fa-eye"></i>
+                    </button>
+                  </div>
+                </div>
+                <small class="text-muted">{{ form.password.help_text }}</small>
+                <div id="pw-generada" class="mt-1" style="display:none;">
+                  <span class="badge badge-success py-2 px-3" id="pw-texto" style="font-size:0.9rem;letter-spacing:1px;"></span>
+                  <small class="text-muted ml-2">↑ Cópiala antes de guardar</small>
+                </div>
+              </div>
+              <!-- Rol y Carrera -->
+              <div class="col-md-6 form-group">
+                <label class="form-control-label">Rol <span class="text-danger">*</span></label>
+                {{ form.rol }}
+                {% if form.rol.errors %}<small class="text-danger">{{ form.rol.errors.0 }}</small>{% endif %}
+              </div>
+              <div class="col-md-6 form-group">
+                <label class="form-control-label" id="lbl-carrera">Carrera (solo Tutores)</label>
+                {{ form.carrera }}
+                <!-- Input oculto para enviar vacío cuando el select esté deshabilitado -->
+                <input type="hidden" name="carrera" id="carrera-hidden" value="">
+              </div>
+            </div>
+
+            <hr>
+            <div class="text-right">
+              <a href="{% url 'admin-usuario-list' %}" class="btn btn-secondary mr-2">Cancelar</a>
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save mr-1"></i> {{ accion }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% include "includes/footer.html" %}
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+// ── Mostrar/ocultar contraseña ──────────────────────────────────
+document.getElementById('btn-ver-pw').addEventListener('click', function() {
+  const input = document.querySelector('input[name="password"]');
+  const icon = this.querySelector('i');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.classList.replace('fa-eye', 'fa-eye-slash');
+  } else {
+    input.type = 'password';
+    icon.classList.replace('fa-eye-slash', 'fa-eye');
+  }
+});
+
+// ── Generar contraseña segura ───────────────────────────────────
+document.getElementById('btn-generar-pw').addEventListener('click', function() {
+  fetch('{% url "admin-generar-password" %}')
+    .then(r => r.json())
+    .then(data => {
+      const input = document.querySelector('input[name="password"]');
+      input.type = 'text';
+      input.value = data.password;
+      document.getElementById('pw-texto').textContent = data.password;
+      document.getElementById('pw-generada').style.display = 'block';
+    });
+});
+
+// ── Bloquear campo Carrera para roles que no son Tutor ──────────
+const rolSelect     = document.getElementById('id_rol');
+const carreraSelect = document.getElementById('id_carrera');
+
+function actualizarCarreraSegunRol() {
+  const textoRol = rolSelect.options[rolSelect.selectedIndex]
+                            ? rolSelect.options[rolSelect.selectedIndex].text.trim()
+                            : '';
+  const esTutor = textoRol === 'Tutor';
+  const hiddenCarrera = document.getElementById('carrera-hidden');
+
+  if (!esTutor) {
+    carreraSelect.value    = '';
+    carreraSelect.disabled = true;
+    carreraSelect.style.opacity     = '0.5';
+    carreraSelect.style.cursor      = 'not-allowed';
+    hiddenCarrera.disabled = false;   // el hidden envía el vacío
+    // Agregar nota solo si no existe
+    if (!document.getElementById('nota-carrera')) {
+      document.getElementById('lbl-carrera').insertAdjacentHTML(
+        'beforeend',
+        '<small class="text-muted ml-2" id="nota-carrera">(solo aplica a Tutores)</small>'
+      );
+    }
+  } else {
+    carreraSelect.disabled = false;
+    carreraSelect.style.opacity = '1';
+    carreraSelect.style.cursor  = '';
+    hiddenCarrera.disabled = true;    // el select envía el valor, no el hidden
+    const nota = document.getElementById('nota-carrera');
+    if (nota) nota.remove();
+  }
+}
+
+// Ejecutar al cargar la página (modo edición)
+actualizarCarreraSegunRol();
+
+// Ejecutar cada vez que cambia el rol
+rolSelect.addEventListener('change', actualizarCarreraSegunRol);
+</script>
+{% endblock %}
+

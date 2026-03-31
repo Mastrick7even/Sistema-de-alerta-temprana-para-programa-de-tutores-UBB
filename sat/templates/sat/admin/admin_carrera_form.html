@@ -1,0 +1,66 @@
+{% extends 'layouts/base.html' %}
+{% block content %}
+<div class="header bg-primary pb-6">
+  <div class="container-fluid">
+    <div class="header-body">
+      <div class="row align-items-center py-4">
+        <div class="col">
+          <h6 class="h2 text-white d-inline-block mb-0">{{ accion }} Carrera</h6>
+          <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
+            <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
+              <li class="breadcrumb-item"><a href="{% url 'admin-panel' %}" class="text-white">Admin</a></li>
+              <li class="breadcrumb-item"><a href="{% url 'admin-carrera-list' %}" class="text-white">Carreras</a></li>
+              <li class="breadcrumb-item active">{{ accion }}</li>
+            </ol>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid mt--6">
+  <div class="row justify-content-center">
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header bg-white border-0">
+          <div class="row align-items-center">
+            <div class="col-8">
+              <h3 class="mb-0">{{ accion }} Carrera {% if carrera %}<small class="text-muted">— {{ carrera.nombre }}</small>{% endif %}</h3>
+            </div>
+            <div class="col-4 text-right">
+              <a href="{% url 'admin-carrera-list' %}" class="btn btn-sm btn-neutral">
+                <i class="fas fa-arrow-left mr-1"></i> Volver
+              </a>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <form method="POST">
+            {% csrf_token %}
+            <div class="form-group">
+              <label class="form-control-label">Nombre de la carrera <span class="text-danger">*</span></label>
+              {{ form.nombre }}
+              {% if form.nombre.errors %}<small class="text-danger">{{ form.nombre.errors.0 }}</small>{% endif %}
+            </div>
+            <div class="form-group">
+              <label class="form-control-label">Encargado de Carrera</label>
+              {{ form.encargado }}
+              <small class="text-muted">Solo aparecen usuarios con rol Encargado de Carrera.</small>
+              {% if form.encargado.errors %}<small class="text-danger">{{ form.encargado.errors.0 }}</small>{% endif %}
+            </div>
+            <hr>
+            <div class="text-right">
+              <a href="{% url 'admin-carrera-list' %}" class="btn btn-secondary mr-2">Cancelar</a>
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save mr-1"></i> {{ accion }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% include "includes/footer.html" %}
+</div>
+{% endblock %}

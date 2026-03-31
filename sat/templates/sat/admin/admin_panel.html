@@ -1,0 +1,157 @@
+{% extends 'layouts/base.html' %}
+{% block content %}
+<div class="header bg-primary pb-6">
+  <div class="container-fluid">
+    <div class="header-body">
+      <div class="row align-items-center py-4">
+        <div class="col-lg-6 col-7">
+          <h6 class="h2 text-white d-inline-block mb-0">Administración del Sistema</h6>
+          <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
+            <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
+              <li class="breadcrumb-item"><a href="/"><i class="fas fa-home"></i></a></li>
+              <li class="breadcrumb-item active">Panel Admin</li>
+            </ol>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid mt--6">
+  <!-- Cards de resumen -->
+  <div class="row">
+    <div class="col-xl-3 col-md-6">
+      <a href="{% url 'admin-usuario-list' %}" class="text-decoration-none">
+        <div class="card card-stats mb-4">
+          <div class="card-body">
+            <div class="row">
+              <div class="col">
+                <h5 class="card-title text-uppercase text-muted mb-0">Usuarios totales</h5>
+                <span class="h2 font-weight-bold mb-0">{{ total_usuarios }}</span>
+              </div>
+              <div class="col-auto">
+                <div class="icon icon-shape bg-gradient-primary text-white rounded-circle shadow">
+                  <i class="fas fa-users"></i>
+                </div>
+              </div>
+            </div>
+            <p class="mt-3 mb-0 text-sm"><span class="text-nowrap">{{ total_ec }} EC · {{ total_tutores }} Tutores</span></p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-xl-3 col-md-6">
+      <a href="{% url 'admin-carrera-list' %}" class="text-decoration-none">
+        <div class="card card-stats mb-4">
+          <div class="card-body">
+            <div class="row">
+              <div class="col">
+                <h5 class="card-title text-uppercase text-muted mb-0">Carreras</h5>
+                <span class="h2 font-weight-bold mb-0">{{ total_carreras }}</span>
+              </div>
+              <div class="col-auto">
+                <div class="icon icon-shape bg-gradient-warning text-white rounded-circle shadow">
+                  <i class="fas fa-university"></i>
+                </div>
+              </div>
+            </div>
+            <p class="mt-3 mb-0 text-sm"><span class="text-nowrap">Gestionar carreras activas</span></p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-xl-3 col-md-6">
+      <a href="{% url 'admin-maestras' %}" class="text-decoration-none">
+        <div class="card card-stats mb-4">
+          <div class="card-body">
+            <div class="row">
+              <div class="col">
+                <h5 class="card-title text-uppercase text-muted mb-0">Tipos de Alarma</h5>
+                <span class="h2 font-weight-bold mb-0">{{ total_tipo_alarma }}</span>
+              </div>
+              <div class="col-auto">
+                <div class="icon icon-shape bg-gradient-danger text-white rounded-circle shadow">
+                  <i class="fas fa-bell"></i>
+                </div>
+              </div>
+            </div>
+            <p class="mt-3 mb-0 text-sm"><span class="text-nowrap">Ver tablas maestras</span></p>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-xl-3 col-md-6">
+      <a href="{% url 'admin-maestras' %}" class="text-decoration-none">
+        <div class="card card-stats mb-4">
+          <div class="card-body">
+            <div class="row">
+              <div class="col">
+                <h5 class="card-title text-uppercase text-muted mb-0">Tipos de Tutoría</h5>
+                <span class="h2 font-weight-bold mb-0">{{ total_tipo_tutoria }}</span>
+              </div>
+              <div class="col-auto">
+                <div class="icon icon-shape bg-gradient-info text-white rounded-circle shadow">
+                  <i class="fas fa-book"></i>
+                </div>
+              </div>
+            </div>
+            <p class="mt-3 mb-0 text-sm"><span class="text-nowrap">{{ total_clasificacion }} clasificaciones</span></p>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Accesos rápidos -->
+  <div class="row">
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0 text-white"><i class="fas fa-users mr-2"></i>Gestión de Usuarios</h5>
+        </div>
+        <div class="card-body">
+          <p class="text-sm text-muted">Crear, editar y activar/desactivar cuentas de Encargados de Carrera y Tutores.</p>
+          <a href="{% url 'admin-usuario-list' %}" class="btn btn-primary btn-block">
+            <i class="fas fa-list mr-2"></i>Ver todos los usuarios
+          </a>
+          <a href="{% url 'admin-usuario-create' %}" class="btn btn-outline-primary btn-block mt-2">
+            <i class="fas fa-user-plus mr-2"></i>Crear nuevo usuario
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0 text-white"><i class="fas fa-university mr-2"></i>Gestión de Carreras</h5>
+        </div>
+        <div class="card-body">
+          <p class="text-sm text-muted">Administrar las carreras del sistema y su asignación a Encargados.</p>
+          <a href="{% url 'admin-carrera-list' %}" class="btn btn-primary btn-block">
+            <i class="fas fa-list mr-2"></i>Ver todas las carreras
+          </a>
+          <a href="{% url 'admin-carrera-create' %}" class="btn btn-outline-primary btn-block mt-2">
+            <i class="fas fa-plus mr-2"></i>Crear nueva carrera
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0 text-white"><i class="fas fa-table mr-2"></i>Tablas Maestras</h5>
+        </div>
+        <div class="card-body">
+          <p class="text-sm text-muted">Gestionar tipos de alarma, tutoría, clasificaciones, estados y deserción.</p>
+          <a href="{% url 'admin-maestras' %}" class="btn btn-primary btn-block">
+            <i class="fas fa-cog mr-2"></i>Administrar tablas
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% include "includes/footer.html" %}
+</div>
+{% endblock %}

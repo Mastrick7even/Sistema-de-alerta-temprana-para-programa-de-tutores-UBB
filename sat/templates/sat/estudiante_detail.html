@@ -157,7 +157,7 @@ Perfil de {{ estudiante.nombre }}
                 </div>
 
                 <div class="card-body pt-0">
-                    <div class="text-center mt-5">
+                    <div class="text-center mt-2">
                         <h5 class="h3">
                             {{ estudiante.nombre }} {{ estudiante.apellido }}
                         </h5>
@@ -168,7 +168,15 @@ Perfil de {{ estudiante.nombre }}
                             <i class="ni business_briefcase-24 mr-2"></i>RUT: {{ estudiante.rut }}
                         </div>
                         <div>
-                            <i class="ni education_hat mr-2"></i>Ingreso: {{ estudiante.anio_ingreso }}
+                            <i class="ni education_hat mr-2"></i>Ingreso: {{ estudiante.anio_ingreso|default:"—" }}
+                        </div>
+                        <div class="mt-2">
+                            <i class="fas fa-user-tie mr-2"></i>Tutor:
+                            {% if estudiante.tutor_asignado %}
+                                <span class="font-weight-bold">{{ estudiante.tutor_asignado.get_full_name }}</span>
+                            {% else %}
+                                <span class="text-muted text-sm font-italic">Sin asignar</span>
+                            {% endif %}
                         </div>
 
                         <hr class="my-4" />
@@ -249,20 +257,47 @@ Perfil de {{ estudiante.nombre }}
 
 
             <div class="card">
-                <div class="card-header">
+                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center pb-0">
                     <h5 class="h3 mb-0">Información Socioeconómica</h5>
+                    <button class="btn btn-sm btn-neutral" type="button" data-toggle="collapse" data-target="#form-socio" aria-expanded="false">
+                        <i class="fas fa-edit"></i>
+                    </button>
                 </div>
                 <div class="card-body">
-                    <dl class="row">
-                        <dt class="col-sm-4">Procedencia</dt>
-                        <dd class="col-sm-8">{{ estudiante.lugar_procedencia|default:"No registrado" }}</dd>
+                    <!-- Vista de datos -->
+                    <div class="collapse show" id="view-socio">
+                        <dl class="row mb-0 text-sm">
+                            <dt class="col-sm-5 text-muted font-weight-normal">Procedencia</dt>
+                            <dd class="col-sm-7 font-weight-bold">{{ estudiante.lugar_procedencia|default:"—" }}</dd>
 
-                        <dt class="col-sm-4">Grupo Familiar</dt>
-                        <dd class="col-sm-8">{{ estudiante.grupo_familiar|default:"No registrado" }}</dd>
+                            <dt class="col-sm-5 text-muted font-weight-normal mt-2">Grupo Familiar</dt>
+                            <dd class="col-sm-7 font-weight-bold mt-2">{{ estudiante.grupo_familiar|default:"—" }}</dd>
 
-                        <dt class="col-sm-4">Beneficios</dt>
-                        <dd class="col-sm-8">{{ estudiante.beneficios_sociales|default:"No registrado" }}</dd>
-                    </dl>
+                            <dt class="col-sm-5 text-muted font-weight-normal mt-2">Beneficios</dt>
+                            <dd class="col-sm-7 font-weight-bold mt-2">{{ estudiante.beneficios_sociales|default:"—" }}</dd>
+                        </dl>
+                    </div>
+
+                    <!-- Formulario de edición (colapsado por defecto) -->
+                    <div class="collapse mt-3" id="form-socio">
+                        <hr class="my-2">
+                        <form method="POST">
+                            {% csrf_token %}
+                            <div class="form-group mb-2">
+                                <label class="form-control-label text-xs">Procedencia</label>
+                                <input type="text" name="lugar_procedencia" class="form-control form-control-sm" value="{{ estudiante.lugar_procedencia|default:'' }}">
+                            </div>
+                            <div class="form-group mb-2">
+                                <label class="form-control-label text-xs">Grupo Familiar</label>
+                                <input type="text" name="grupo_familiar" class="form-control form-control-sm" value="{{ estudiante.grupo_familiar|default:'' }}">
+                            </div>
+                            <div class="form-group mb-3">
+                                <label class="form-control-label text-xs">Beneficios (Gratuidad, becas, etc.)</label>
+                                <textarea name="beneficios_sociales" class="form-control form-control-sm" rows="2">{{ estudiante.beneficios_sociales|default:'' }}</textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-sm btn-block">Guardar cambios</button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>

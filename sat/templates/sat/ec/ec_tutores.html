@@ -1,0 +1,207 @@
+{% extends 'layouts/base.html' %}
+{% block content %}
+<div class="header bg-primary pb-6">
+  <div class="container-fluid">
+    <div class="header-body">
+      <div class="row align-items-center py-4">
+        <div class="col-lg-6 col-7">
+          <h6 class="h2 text-white d-inline-block mb-0">Gestión de Tutores</h6>
+          <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
+            <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
+              <li class="breadcrumb-item"><a href="{% url 'home' %}" class="text-white"><i class="fas fa-home"></i></a></li>
+              <li class="breadcrumb-item active">Mis Tutores</li>
+            </ol>
+          </nav>
+        </div>
+        <div class="col-lg-6 col-5 text-right">
+          {% if sin_tutor > 0 %}
+          <a href="{% url 'estudiante-list' %}?sin_tutor=1&gen={{ ultima_gen }}" class="btn btn-sm btn-warning" title="Haz clic para ver la lista de estos estudiantes listos para ser asignados">
+            <i class="fas fa-exclamation-triangle mr-1"></i>
+            {{ sin_tutor }} alumno{{ sin_tutor|pluralize }} sin tutor (Gen. {{ ultima_gen }})
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid mt--6">
+
+  <!-- Filtro por carrera -->
+  <div class="card mb-4">
+    <div class="card-body py-3">
+      <form method="GET" class="form-inline">
+        <label class="mr-2 text-sm font-weight-bold">Filtrar por carrera:</label>
+        <select name="carrera" class="form-control form-control-sm mr-2" onchange="this.form.submit()">
+          <option value="">Todas mis carreras</option>
+          {% for c in carreras %}
+          <option value="{{ c.id_carrera }}" {% if carrera_filter == c.id_carrera|stringformat:"s" %}selected{% endif %}>
+            {{ c.nombre }}
+          </option>
+          {% endfor %}
+        </select>
+        {% if carrera_filter %}
+        <a href="{% url 'ec-tutores' %}" class="btn btn-sm btn-neutral">
+          <i class="fas fa-times mr-1"></i>Limpiar
+        </a>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+
+  <!-- Tabla de tutores -->
+  <div class="card">
+    <div class="card-header border-0">
+      <div class="row align-items-center">
+        <div class="col">
+          <h3 class="mb-0">
+            Tutores activos
+            <span class="badge badge-primary ml-2">{{ page_obj.paginator.count }}</span>
+          </h3>
+        </div>
+        <div class="col text-right">
+          <small class="text-muted">Capacidad referencial: {{ capacidad }} alumnos/tutor</small>
+        </div>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table align-items-center table-flush">
+        <thead class="thead-light">
+          <tr>
+            <th>Tutor</th>
+            <th>Carrera</th>
+            <th>Carga actual</th>
+            <th style="min-width:180px;">Ocupación</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in page_obj %}
+          <tr>
+            <td>
+              <div class="media align-items-center">
+                <div class="avatar rounded-circle bg-gradient-{{ item.color }} text-white mr-3 d-flex align-items-center justify-content-center"
+                  style="width:38px;height:38px;font-size:0.8rem;flex-shrink:0;">
+                  <i class="fas fa-user-graduate"></i>
+                </div>
+                <div class="media-body">
+                  <span class="font-weight-bold text-sm">{{ item.tutor.nombre }} {{ item.tutor.apellido }}</span>
+                  {% if item.sobre_limite %}
+                  <span class="badge badge-warning ml-1" title="Supera el límite referencial">
+                    <i class="fas fa-exclamation-triangle"></i>
+                  </span>
+                  {% endif %}
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="badge badge-pill badge-default">{{ item.tutor.carrera.nombre }}</span>
+            </td>
+            <td>
+              {% if item.total == 0 %}
+              <span class="badge badge-danger">Sin alumnos</span>
+              {% else %}
+              <span class="font-weight-bold">{{ item.total }}</span>
+              <span class="text-muted text-sm"> / {{ capacidad }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <div class="d-flex align-items-center">
+                <div class="flex-grow-1 mr-2">
+                  <div class="progress" style="height: 8px;">
+                    <div class="progress-bar bg-{{ item.color }}" role="progressbar"
+                      style="width: {{ item.pct }}%" aria-valuenow="{{ item.pct }}" aria-valuemin="0" aria-valuemax="100">
+                    </div>
+                  </div>
+                </div>
+                <span class="text-xs text-muted" style="min-width:36px;">{{ item.pct }}%</span>
+              </div>
+            </td>
+            <td class="text-right">
+              <a href="{% url 'ec-tutor-detalle' item.tutor.pk %}" class="btn btn-sm btn-primary">
+                <i class="fas fa-eye mr-1"></i> Ver alumnos
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center text-muted py-5">
+              <i class="fas fa-users fa-2x mb-2 d-block"></i>
+              No hay tutores asignados a tus carreras.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Paginación -->
+    <div class="card-footer py-4">
+      {% if is_paginated %}
+      <nav aria-label="Paginación de tutores">
+        <ul class="pagination justify-content-center mb-0">
+          {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page=1{% if carrera_filter %}&carrera={{ carrera_filter }}{% endif %}" tabindex="-1">
+              <i class="fas fa-angle-double-left"></i>
+              <span class="sr-only">Primera</span>
+            </a>
+          </li>
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if carrera_filter %}&carrera={{ carrera_filter }}{% endif %}" tabindex="-1">
+              <i class="fas fa-angle-left"></i>
+              <span class="sr-only">Anterior</span>
+            </a>
+          </li>
+          {% else %}
+          <li class="page-item disabled">
+            <a class="page-link" href="#" tabindex="-1">
+              <i class="fas fa-angle-double-left"></i>
+            </a>
+          </li>
+          <li class="page-item disabled">
+            <a class="page-link" href="#" tabindex="-1">
+              <i class="fas fa-angle-left"></i>
+            </a>
+          </li>
+          {% endif %}
+
+          <li class="align-self-center mx-3">
+            <span class="text-sm text-muted">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+          </li>
+
+          {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if carrera_filter %}&carrera={{ carrera_filter }}{% endif %}">
+              <i class="fas fa-angle-right"></i>
+              <span class="sr-only">Siguiente</span>
+            </a>
+          </li>
+          <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if carrera_filter %}&carrera={{ carrera_filter }}{% endif %}">
+              <i class="fas fa-angle-double-right"></i>
+              <span class="sr-only">Última</span>
+            </a>
+          </li>
+          {% else %}
+          <li class="page-item disabled">
+            <a class="page-link" href="#">
+              <i class="fas fa-angle-right"></i>
+            </a>
+          </li>
+          <li class="page-item disabled">
+            <a class="page-link" href="#">
+              <i class="fas fa-angle-double-right"></i>
+            </a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+    </div>
+  </div>
+
+  {% include "includes/footer.html" %}
+</div>
+{% endblock %}

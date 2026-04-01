@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import (
-    EstudianteListView, EstudianteDetailView, BitacoraCreateView, BitacoraUpdateView, BitacoraDeleteView, 
-    DashboardView, ReporteEstudiantePDF, MisTutoriasView, tomar_asistencia, TutoriaCreateView, TutoriaUpdateView, TutoriaDeleteView, 
+    EstudianteListView, EstudianteDetailView, BitacoraCreateView, BitacoraUpdateView, BitacoraDeleteView,
+    DashboardView, ReporteEstudiantePDF, MisTutoriasView, tomar_asistencia, TutoriaCreateView, TutoriaUpdateView, TutoriaDeleteView,
     leer_notificacion, todas_notificaciones, marcar_notificaciones_leidas, eliminar_notificaciones, ReporteAsistenciaView,
     DetalleAsistenciaEstudianteView, sobrescribir_riesgo, eliminar_historial_riesgo,
     recalcular_riesgo_estudiante, recalcular_riesgo_masivo, confirmar_prediccion_ia, rechazar_prediccion_ia,
@@ -9,6 +9,8 @@ from .views import (
     AdminPanelView, AdminUsuarioListView, admin_usuario_create, admin_usuario_edit, admin_usuario_toggle,
     AdminCarreraListView, admin_carrera_create, admin_carrera_edit, admin_carrera_delete,
     admin_maestras, admin_maestra_accion, admin_generar_password,
+    # Bloque 3: Gestión Tutores EC
+    EcTutoresView, EcTutorDetalleView, ec_reasignar_estudiante, ec_reasignar_todo, ec_asignar_alumnos, ec_acciones_masivas_tutorados,
 )
 
 urlpatterns = [
@@ -52,5 +54,12 @@ urlpatterns = [
     path('admin-sat/maestras/', admin_maestras, name='admin-maestras'),
     path('admin-sat/maestras/<str:modelo>/', admin_maestra_accion, name='admin-maestra-crear'),
     path('admin-sat/maestras/<str:modelo>/<int:pk>/', admin_maestra_accion, name='admin-maestra-editar'),
-]
 
+    # ── Bloque 3: Gestión Tutores para EC ──────────────────────────
+    path('ec/tutores/', EcTutoresView.as_view(), name='ec-tutores'),
+    path('ec/tutores/<int:pk>/', EcTutorDetalleView.as_view(), name='ec-tutor-detalle'),
+    path('ec/tutores/<int:pk>/reasignar-todo/', ec_reasignar_todo, name='ec-reasignar-todo'),
+    path('ec/estudiantes/<int:pk>/reasignar/', ec_reasignar_estudiante, name='ec-reasignar-estudiante'),
+    path('ec/tutores/<int:pk>/asignar/', ec_asignar_alumnos, name='ec-asignar-alumnos'),
+    path('ec/tutores/<int:pk>/acciones-masivas/', ec_acciones_masivas_tutorados, name='ec-acciones-masivas-tutorados'),
+]

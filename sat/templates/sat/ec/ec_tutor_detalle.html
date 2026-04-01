@@ -1,0 +1,445 @@
+{% extends 'layouts/base.html' %}
+{% block content %}
+<div class="header bg-primary pb-6">
+  <div class="container-fluid">
+    <div class="header-body">
+      <div class="row align-items-center py-4">
+        <div class="col-lg-7">
+          <h6 class="h2 text-white d-inline-block mb-0">
+            {{ tutor.nombre }} {{ tutor.apellido }}
+          </h6>
+          <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
+            <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
+              <li class="breadcrumb-item"><a href="{% url 'home' %}" class="text-white"><i class="fas fa-home"></i></a></li>
+              <li class="breadcrumb-item"><a href="{% url 'ec-tutores' %}" class="text-white">Mis Tutores</a></li>
+              <li class="breadcrumb-item active">Detalle</li>
+            </ol>
+          </nav>
+        </div>
+        <div class="col-lg-5 text-right">
+          {% if total > 0 and tutores_disponibles %}
+          <button type="button" onclick="abrirReasignarTodos({{ total }})" class="btn btn-sm btn-warning">
+            <i class="fas fa-exchange-alt mr-1"></i> Reasignar todos ({{ total }})
+          </button>
+          {% endif %}
+          <a href="{% url 'ec-asignar-alumnos' tutor.pk %}" class="btn btn-sm btn-success">
+            <i class="fas fa-user-plus mr-1"></i> Añadir alumnos
+          </a>
+          <a href="{% url 'ec-tutores' %}" class="btn btn-sm btn-neutral ml-1">
+            <i class="fas fa-arrow-left"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid mt--6">
+
+  <!-- Info del tutor -->
+  <div class="row mb-4">
+    <div class="col-md-4">
+      <div class="card card-stats h-100 mb-0">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col">
+              <h5 class="card-title text-uppercase text-muted mb-0">Carrera</h5>
+              <span class="h4 font-weight-bold mb-0">{{ tutor.carrera.nombre }}</span>
+            </div>
+            <div class="col-auto">
+              <div class="icon icon-shape bg-gradient-primary text-white rounded-circle shadow">
+                <i class="fas fa-graduation-cap"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card card-stats h-100 mb-0">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col">
+              <h5 class="card-title text-uppercase text-muted mb-0">Alumnos asignados</h5>
+              <span class="h2 font-weight-bold mb-0">
+                {{ total }}
+                <small class="text-muted" style="font-size:1rem;">/ {{ capacidad }}</small>
+              </span>
+            </div>
+            <div class="col-auto">
+              <div class="icon icon-shape bg-gradient-{% if sobre_limite %}warning{% elif total == 0 %}danger{% else %}success{% endif %} text-white rounded-circle shadow">
+                <i class="fas fa-users"></i>
+              </div>
+            </div>
+          </div>
+          {% if sobre_limite %}
+          <p class="mt-2 mb-0 text-sm text-warning">
+            <i class="fas fa-exclamation-triangle mr-1"></i>Superando el límite referencial
+          </p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card card-stats h-100 mb-0">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col">
+              <h5 class="card-title text-uppercase text-muted mb-0">Tutores disponibles</h5>
+              <span class="h2 font-weight-bold mb-0">{{ tutores_disponibles|length }}</span>
+            </div>
+            <div class="col-auto">
+              <div class="icon icon-shape bg-gradient-info text-white rounded-circle shadow">
+                <i class="fas fa-random"></i>
+              </div>
+            </div>
+          </div>
+          <p class="mt-2 mb-0 text-sm text-muted">Para reasignar alumnos</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lista de alumnos -->
+  <div class="card">
+    <div class="card-header border-0 pb-0">
+      <div class="row align-items-center mb-3">
+        <div class="col-sm-6">
+          <h3 class="mb-0">
+            Alumnos asignados
+            {% if total == 0 %}
+            <span class="badge badge-danger ml-2">Sin alumnos</span>
+            {% else %}
+            <span class="badge badge-primary ml-2">{{ total }}</span>
+            {% endif %}
+          </h3>
+        </div>
+        <div class="col-sm-6 text-sm-right mt-3 mt-sm-0">
+          <div class="dropdown d-inline-block" id="bulk-actions" style="display: none !important;">
+            <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              Acciones Masivas (<span id="count-selected">0</span>)
+            </button>
+            <div class="dropdown-menu dropdown-menu-right">
+              <button class="dropdown-item text-danger" type="button" onclick="submitBulk('quitar')">
+                <i class="fas fa-user-times mr-2"></i>Quitar asignación
+              </button>
+              <button class="dropdown-item text-primary" type="button" onclick="openBulkReassign()">
+                <i class="fas fa-exchange-alt mr-2"></i>Reasignar...
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <form id="form-masivo" method="POST" action="{% url 'ec-acciones-masivas-tutorados' tutor.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="accion" id="input-accion-masiva" value="">
+      <!-- Reassign modal trigger needs the target tutor id, handled in js -->
+      <input type="hidden" name="tutor_destino" id="input-tutor-destino-masivo" value="">
+      
+      <div class="table-responsive">
+        <table class="table align-items-center table-flush">
+          <thead class="thead-light">
+            <tr>
+              <th style="width: 40px;">
+                <div class="custom-control custom-checkbox text-center">
+                  <input type="checkbox" class="custom-control-input" id="checkAllAssigned">
+                  <label class="custom-control-label" for="checkAllAssigned"></label>
+                </div>
+              </th>
+              <th>Alumno</th>
+              <th>Carrera</th>
+              <th>Riesgo IA</th>
+              <th class="text-right">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in estudiantes_data %}
+            <tr>
+              <td>
+                <div class="custom-control custom-checkbox">
+                  <input type="checkbox" class="custom-control-input checkbox-assigned" name="estudiantes" value="{{ item.est.pk }}" id="check_est_{{ item.est.pk }}">
+                  <label class="custom-control-label" for="check_est_{{ item.est.pk }}"></label>
+                </div>
+              </td>
+              <td>
+                <span class="font-weight-bold text-sm">{{ item.est.nombre }} {{ item.est.apellido }}</span>
+                <br><small class="text-muted">{{ item.est.email }}</small>
+              </td>
+              <td>
+                <span class="badge badge-pill badge-default">{{ item.est.carrera.nombre }}</span>
+              </td>
+              <td>
+                <span class="badge badge-{{ item.riesgo_color }}">{{ item.riesgo_label }}</span>
+              </td>
+              <td class="text-right">
+                <a href="{% url 'estudiante-detail' item.est.pk %}" class="btn btn-xs btn-neutral" title="Ver ficha">
+                  <i class="fas fa-eye"></i>
+                </a>
+                {% if tutores_disponibles %}
+                <button type="button" class="btn btn-xs btn-primary"
+                  onclick="abrirReasignar({{ item.est.pk }}, '{{ item.est.nombre|escapejs }} {{ item.est.apellido|escapejs }}')">
+                  <i class="fas fa-exchange-alt mr-1"></i>Reasignar
+                </button>
+                <button type="button" class="btn btn-xs btn-danger" title="Quitar tutor" 
+                  onclick="quitarIndividual({{ item.est.pk }}, '{{ item.est.nombre|escapejs }} {{ item.est.apellido|escapejs }}')">
+                  <i class="fas fa-user-times"></i>
+                </button>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-5">
+                <i class="fas fa-user-slash fa-2x mb-2 d-block"></i>
+                Este tutor no tiene alumnos asignados.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </form>
+  </div>
+
+  {% include "includes/footer.html" %}
+</div>
+
+<!-- ══ MODAL: Reasignar alumno individual ═══════════════════════ -->
+<div class="modal fade" id="modal-reasignar" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <form method="POST" id="form-reasignar" action="">
+        {% csrf_token %}
+        <input type="hidden" name="from_tutor" value="{{ tutor.pk }}">
+        <div class="modal-header bg-primary text-white py-3">
+          <h5 class="modal-title text-white mb-0">
+            <i class="fas fa-exchange-alt mr-2"></i>Reasignar alumno
+          </h5>
+          <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-sm text-muted mb-1">Alumno a reasignar:</p>
+          <p class="font-weight-bold mb-3" id="modal-alumno-nombre">—</p>
+
+          <label class="form-control-label">Seleccionar tutor destino <span class="text-danger">*</span></label>
+          <select name="tutor_destino" class="form-control" required>
+            <option value="">— Seleccione un tutor —</option>
+            {% for t in tutores_disponibles %}
+            <option value="{{ t.pk }}">
+              {{ t.nombre }} {{ t.apellido }}
+              ({{ t.estudiante_set.count }} alumnos)
+            </option>
+            {% endfor %}
+          </select>
+          <small class="text-muted mt-1 d-block">
+            Solo se muestran tutores de la misma carrera ({{ tutor.carrera.nombre }}).
+          </small>
+        </div>
+        <div class="modal-footer py-2">
+          <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="fas fa-check mr-1"></i>Confirmar reasignación
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: Reasignar MASIVO ═══════════════════════ -->
+<div class="modal fade" id="modal-reasignar-masivo" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white py-3">
+        <h5 class="modal-title text-white mb-0">
+          <i class="fas fa-users mr-2"></i>Reasignar alumnos seleccionados
+        </h5>
+        <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-3">Se reasignarán <strong id="modal-masivo-count">0</strong> estudiante(s).</p>
+        <label class="form-control-label">Seleccionar tutor destino <span class="text-danger">*</span></label>
+        <select id="select-tutor-masivo" class="form-control">
+          <option value="">— Seleccione un tutor —</option>
+          {% for t in tutores_disponibles %}
+          <option value="{{ t.pk }}">
+            {{ t.nombre }} {{ t.apellido }}
+            ({{ t.estudiante_set.count }} alumnos)
+          </option>
+          {% endfor %}
+        </select>
+        <div id="modal-masivo-error" class="text-danger mt-2 text-sm" style="display:none;">Debes seleccionar un tutor destino.</div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="confirmBulkReassign()">
+          <i class="fas fa-check mr-1"></i>Confirmar masivamente
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: Quitar alumno individual ═══════════════════════ -->
+<div class="modal fade" id="modal-quitar-individual" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white py-3">
+        <h5 class="modal-title text-white mb-0">
+          <i class="fas fa-exclamation-triangle mr-2"></i>Quitar asignación
+        </h5>
+        <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">¿Estás seguro que deseas dejar a <strong id="modal-quitar-nombre">—</strong> temporalmente SIN TUTOR?</p>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="confirmarQuitarIndividual()">
+          <i class="fas fa-user-times mr-1"></i>Sí, quitar asignación
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: Quitar alumnos MASIVO ═══════════════════════ -->
+<div class="modal fade" id="modal-quitar-masivo" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white py-3">
+        <h5 class="modal-title text-white mb-0">
+          <i class="fas fa-exclamation-triangle mr-2"></i>Quitar asignación masiva
+        </h5>
+        <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">¿Estás seguro que deseas dejar a <strong id="modal-quitar-masivo-count">0</strong> estudiante(s) seleccionados temporalmente SIN TUTOR?</p>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger btn-sm" onclick="confirmarBulkQuitar()">
+          <i class="fas fa-user-times mr-1"></i>Sí, quitar asignaciones
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ FORMULARIO OCULTO INDIVIDUAL QUITADO ═══════════════════════ -->
+<form id="form-quitar-individual" method="POST" style="display:none;">
+    {% csrf_token %}
+    <input type="hidden" name="accion" value="quitar">
+    <input type="hidden" name="estudiantes" id="input-quitar-estudiante" value="">
+</form>
+
+{% endblock %}
+
+{% block javascripts %}
+<script>
+// --- Reasignación Individual ---
+function abrirReasignar(estudiantePk, nombreAlumno) {
+  const url = `/ec/estudiantes/${estudiantePk}/reasignar/`;
+  document.getElementById('form-reasignar').action = url;
+  document.getElementById('modal-alumno-nombre').textContent = nombreAlumno;
+  document.querySelector('#modal-reasignar select[name="tutor_destino"]').value = '';
+  $('#modal-reasignar').modal('show');
+}
+
+function quitarIndividual(estudiantePk, nombreAlumno) {
+  document.getElementById('modal-quitar-nombre').textContent = nombreAlumno;
+  document.getElementById('input-quitar-estudiante').value = estudiantePk;
+  $('#modal-quitar-individual').modal('show');
+}
+
+function confirmarQuitarIndividual() {
+  const formUrl = `{% url 'ec-acciones-masivas-tutorados' tutor.pk %}`;
+  const formInfo = document.getElementById('form-quitar-individual');
+  formInfo.action = formUrl;
+  // El input-quitar-estudiante ya tiene el valor
+  formInfo.submit();
+}
+
+// --- Acciones Masivas (Checkboxes) ---
+document.addEventListener('DOMContentLoaded', function() {
+  const checkAll = document.getElementById('checkAllAssigned');
+  const checkboxes = document.querySelectorAll('.checkbox-assigned');
+  const bulkContainer = document.getElementById('bulk-actions');
+  const countSpan = document.getElementById('count-selected');
+
+  function updateBulkUI() {
+    const cant = Array.from(checkboxes).filter(cb => cb.checked).length;
+    countSpan.textContent = cant;
+    if(cant > 0) {
+      bulkContainer.style.setProperty('display', 'inline-block', 'important');
+    } else {
+      bulkContainer.style.setProperty('display', 'none', 'important');
+    }
+  }
+
+  if(checkAll) {
+    checkAll.addEventListener('change', function() {
+      checkboxes.forEach(cb => { cb.checked = this.checked; });
+      updateBulkUI();
+    });
+  }
+
+  checkboxes.forEach(cb => {
+    cb.addEventListener('change', function() {
+      updateBulkUI();
+      if (!this.checked) checkAll.checked = false;
+      if (Array.from(checkboxes).every(c => c.checked)) checkAll.checked = true;
+    });
+  });
+});
+
+function submitBulk(accion) {
+  const checkboxes = document.querySelectorAll('.checkbox-assigned:checked');
+  if (checkboxes.length === 0) return;
+  
+  if (accion === 'quitar') {
+      document.getElementById('modal-quitar-masivo-count').textContent = checkboxes.length;
+      $('#modal-quitar-masivo').modal('show');
+      return;
+  }
+  
+  document.getElementById('input-accion-masiva').value = accion;
+  document.getElementById('form-masivo').submit();
+}
+
+function confirmarBulkQuitar() {
+    document.getElementById('input-accion-masiva').value = 'quitar';
+    document.getElementById('form-masivo').submit();
+}
+
+function openBulkReassign() {
+  const cant = document.querySelectorAll('.checkbox-assigned:checked').length;
+  if(cant === 0) return;
+  document.getElementById('modal-masivo-count').textContent = cant;
+  document.getElementById('select-tutor-masivo').value = '';
+  document.getElementById('modal-masivo-error').style.display = 'none';
+  $('#modal-reasignar-masivo').modal('show');
+}
+
+function confirmBulkReassign() {
+  const tutorDestino = document.getElementById('select-tutor-masivo').value;
+  if(!tutorDestino) {
+      document.getElementById('modal-masivo-error').style.display = 'block';
+      return;
+  }
+  document.getElementById('input-tutor-destino-masivo').value = tutorDestino;
+  submitBulk('reasignar');
+}
+
+function abrirReasignarTodos(total) {
+  const checkAll = document.getElementById('checkAllAssigned');
+  if (checkAll && total > 0) {
+      checkAll.checked = true;
+      checkAll.dispatchEvent(new Event('change'));
+      openBulkReassign();
+  }
+}
+</script>
+{% endblock %}

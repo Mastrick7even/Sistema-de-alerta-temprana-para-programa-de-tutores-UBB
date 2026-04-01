@@ -1,0 +1,187 @@
+{% extends 'layouts/base.html' %}
+{% block content %}
+<div class="header bg-primary pb-6">
+  <div class="container-fluid">
+    <div class="header-body">
+      <div class="row align-items-center py-4">
+        <div class="col-lg-6 col-7">
+          <h6 class="h2 text-white d-inline-block mb-0">Añadir Alumnos</h6>
+          <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
+            <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
+              <li class="breadcrumb-item"><a href="{% url 'home' %}" class="text-white"><i class="fas fa-home"></i></a></li>
+              <li class="breadcrumb-item"><a href="{% url 'ec-tutores' %}" class="text-white">Mis Tutores</a></li>
+              <li class="breadcrumb-item"><a href="{% url 'ec-tutor-detalle' tutor_destino.pk %}" class="text-white">{{ tutor_destino.nombre }}</a></li>
+              <li class="breadcrumb-item active">Añadir nuevos</li>
+            </ol>
+          </nav>
+        </div>
+        <div class="col-lg-6 col-5 text-right">
+          <a href="{% url 'ec-tutor-detalle' tutor_destino.pk %}" class="btn btn-sm btn-neutral">Volver al detalle</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid mt--6">
+  
+  <div class="card mb-4">
+    <div class="card-body py-3">
+      <form method="GET" class="form-inline">
+        <label class="mr-2 text-sm font-weight-bold">Filtrar por generación (año ingreso):</label>
+        <select name="generacion" class="form-control form-control-sm mr-2" onchange="this.form.submit()">
+          <option value="">Todas las generaciones</option>
+          {% for gen in generaciones %}
+          <option value="{{ gen }}" {% if generacion_filtro == gen|stringformat:"s" %}selected{% endif %}>
+            Generación {{ gen }}
+          </option>
+          {% endfor %}
+        </select>
+        {% if generacion_filtro %}
+        <a href="{% url 'ec-asignar-alumnos' tutor_destino.pk %}" class="btn btn-sm btn-neutral mt-2 mt-md-0">
+          <i class="fas fa-times mr-1"></i>Limpiar
+        </a>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header border-0 pb-0">
+      <div class="row align-items-center">
+        <div class="col">
+          <h3 class="mb-0">
+            Alumnos sin tutor en {{ tutor_destino.carrera.nombre }}
+            <span class="badge badge-warning ml-2">{{ total_sin_tutor }}</span>
+          </h3>
+          <p class="text-sm text-muted mb-0 mt-1">Selecciona los estudiantes que deseas asignar a <strong>{{tutor_destino.get_full_name}}</strong>.</p>
+        </div>
+      </div>
+    </div>
+
+    <form method="POST" id="form-asignacion">
+      {% csrf_token %}
+      <div class="table-responsive mt-3">
+        <table class="table align-items-center table-flush">
+          <thead class="thead-light">
+            <tr>
+              <th style="width: 40px;">
+                <div class="custom-control custom-checkbox text-center">
+                  <input type="checkbox" class="custom-control-input" id="checkAll">
+                  <label class="custom-control-label" for="checkAll"></label>
+                </div>
+              </th>
+              <th>Estudiante</th>
+              <th>RUT</th>
+              <th>Ingreso</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for est in page_obj %}
+            <tr>
+              <td>
+                <div class="custom-control custom-checkbox">
+                  <input type="checkbox" class="custom-control-input checkbox-est" name="estudiantes" value="{{ est.pk }}" id="check_{{ est.pk }}">
+                  <label class="custom-control-label" for="check_{{ est.pk }}"></label>
+                </div>
+              </td>
+              <td>
+                <span class="font-weight-bold">{{ est.nombre }} {{ est.apellido }}</span>
+                <br>
+                <small class="text-muted">{{ est.email|default:"Sin correo" }}</small>
+              </td>
+              <td>{{ est.rut }}</td>
+              <td>{{ est.anio_ingreso }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" class="text-center py-5 text-muted">
+                <i class="fas fa-check-circle fa-2x mb-3 text-success"></i>
+                <br>No hay estudiantes sin tutor para los filtros seleccionados.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card-footer d-flex justify-content-between align-items-center">
+        <!-- Paginador dentro del footer -->
+        {% if is_paginated %}
+        <nav aria-label="Paginación">
+          <ul class="pagination mb-0">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if generacion_filtro %}&generacion={{ generacion_filtro }}{% endif %}">
+                <i class="fas fa-angle-left"></i>
+              </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+              <span class="page-link"><i class="fas fa-angle-left"></i></span>
+            </li>
+            {% endif %}
+
+            <li class="align-self-center mx-3">
+              <span class="text-sm text-muted">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+            </li>
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if generacion_filtro %}&generacion={{ generacion_filtro }}{% endif %}">
+                <i class="fas fa-angle-right"></i>
+              </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+              <span class="page-link"><i class="fas fa-angle-right"></i></span>
+            </li>
+            {% endif %}
+          </ul>
+        </nav>
+        {% else %}
+        <div></div>
+        {% endif %}
+
+        <button type="submit" class="btn btn-success" id="btn-submit" disabled>
+          <i class="fas fa-save mr-1"></i> Asignar seleccionados
+        </button>
+      </div>
+    </form>
+  </div>
+  {% include "includes/footer.html" %}
+</div>
+
+{% endblock %}
+
+{% block javascripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const checkAll = document.getElementById('checkAll');
+  const checkboxes = document.querySelectorAll('.checkbox-est');
+  const btnSubmit = document.getElementById('btn-submit');
+
+  function updateButtonState() {
+    const isChecked = Array.from(checkboxes).some(cb => cb.checked);
+    btnSubmit.disabled = !isChecked;
+  }
+
+  if(checkAll) {
+    checkAll.addEventListener('change', function() {
+      checkboxes.forEach(cb => {
+        cb.checked = this.checked;
+      });
+      updateButtonState();
+    });
+  }
+
+  checkboxes.forEach(cb => {
+    cb.addEventListener('change', function() {
+      updateButtonState();
+      if (!this.checked) checkAll.checked = false;
+      if (Array.from(checkboxes).every(c => c.checked)) checkAll.checked = true;
+    });
+  });
+});
+</script>
+{% endblock %}

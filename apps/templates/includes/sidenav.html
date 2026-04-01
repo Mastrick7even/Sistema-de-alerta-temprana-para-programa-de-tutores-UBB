@@ -113,6 +113,23 @@
             </a>
           </li> -->
 
+          <!-- ── Sección Coordinación (EC y Superuser) ── -->
+          {% if request.user.is_superuser or perfil.rol.nombre == 'Encargado de Carrera' %}
+          <li class="nav-item">
+            <hr class="my-3">
+            <h6 class="navbar-heading p-0 text-muted">
+              <span class="docs-normal">Coordinación</span>
+            </h6>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link {% if 'ec/tutores' in request.path %}active{% endif %}"
+              href="{% url 'ec-tutores' %}">
+              <i class="ni ni-badge text-primary"></i>
+              <span class="nav-link-text">Gestión de Tutores</span>
+            </a>
+          </li>
+          {% endif %}
+
           <!-- Sección Administración (solo superuser) -->
           {% if request.user.is_superuser %}
           <li class="nav-item">

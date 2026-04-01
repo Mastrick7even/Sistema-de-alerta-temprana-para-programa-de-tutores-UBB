@@ -72,6 +72,13 @@ class EstudianteListView(LoginRequiredMixin, ListView):
         if carrera_filter:
             queryset = queryset.filter(carrera__id_carrera=carrera_filter)
 
+        # D. Filtro de Estudiantes sin Tutor (utilizado desde panel EC)
+        if self.request.GET.get('sin_tutor') == '1':
+            queryset = queryset.filter(tutor_asignado__isnull=True)
+            gen = self.request.GET.get('gen')
+            if gen:
+                queryset = queryset.filter(anio_ingreso=gen)
+
         return queryset.order_by('-id_estudiante')
 
     def get_context_data(self, **kwargs):
@@ -144,6 +151,24 @@ class EstudianteDetailView(LoginRequiredMixin, DetailView):
         except Usuario.DoesNotExist:
             context['es_encargado'] = self.request.user.is_superuser
         return context
+
+    def post(self, request, *args, **kwargs):
+        """Maneja la edición de la Información Socioeconómica."""
+        self.object = self.get_object()
+        
+        # Obtenemos los campos del POST
+        lugar_procedencia = request.POST.get('lugar_procedencia', '').strip()
+        grupo_familiar = request.POST.get('grupo_familiar', '').strip()
+        beneficios_sociales = request.POST.get('beneficios_sociales', '').strip()
+        
+        # Actualizamos el estudiante
+        self.object.lugar_procedencia = lugar_procedencia
+        self.object.grupo_familiar = grupo_familiar
+        self.object.beneficios_sociales = beneficios_sociales
+        self.object.save(update_fields=['lugar_procedencia', 'grupo_familiar', 'beneficios_sociales'])
+        
+        messages.success(request, 'Información socioeconómica actualizada correctamente.')
+        return redirect('estudiante-detail', pk=self.object.pk)
     
 class BitacoraCreateView(LoginRequiredMixin, CreateView):
     model = Bitacora
@@ -1294,3 +1319,384 @@ def admin_maestra_accion(request, modelo, pk=None):
 
     messages.error(request, 'Formulario con errores. Verifica los campos.')
     return redirect('admin-maestras')
+
+
+# ═══════════════════════════════════════════════════════════════════
+# BLOQUE 3: GESTIÓN TUTOR-ESTUDIANTE PARA EC
+# ═══════════════════════════════════════════════════════════════════
+
+CAPACIDAD_TUTOR = 16  # Máximo informativo de alumnos por tutor
+
+RIESGO_LABEL = {-1: 'Sin Contacto', 0: 'Sin Riesgo', 1: 'Bajo', 2: 'Medio', 3: 'Alto'}
+RIESGO_COLOR = {-1: 'secondary', 0: 'success', 1: 'info', 2: 'warning', 3: 'danger'}
+
+
+def _get_ec_carreras(request):
+    """Retorna las carreras asignadas al EC logueado, o todas si es superuser."""
+    if request.user.is_superuser:
+        return Carrera.objects.all()
+    try:
+        perfil = Usuario.objects.get(email=request.user.email)
+        return Carrera.objects.filter(encargado=perfil)
+    except Usuario.DoesNotExist:
+        return Carrera.objects.none()
+
+
+def _get_ec_perfil(request):
+    """Retorna el perfil sat.Usuario del EC logueado (None si superuser)."""
+    if request.user.is_superuser:
+        return None
+    try:
+        return Usuario.objects.get(email=request.user.email)
+    except Usuario.DoesNotExist:
+        return None
+
+
+class EcRequiredMixin:
+    """Mixin que permite acceso a Encargados de Carrera y superusers."""
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        if request.user.is_superuser:
+            return super().dispatch(request, *args, **kwargs)
+        try:
+            perfil = Usuario.objects.get(email=request.user.email)
+            if perfil.rol.nombre != 'Encargado de Carrera':
+                messages.error(request, '⛔ No tienes permiso para acceder a esa sección.')
+                return redirect('home')
+        except Usuario.DoesNotExist:
+            messages.error(request, '⛔ No tienes permiso para acceder a esa sección.')
+            return redirect('home')
+        return super().dispatch(request, *args, **kwargs)
+
+
+def ec_required(view_func):
+    """Decorador equivalente a EcRequiredMixin para vistas de función."""
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        if request.user.is_superuser:
+            return view_func(request, *args, **kwargs)
+        try:
+            perfil = Usuario.objects.get(email=request.user.email)
+            if perfil.rol.nombre != 'Encargado de Carrera':
+                messages.error(request, '⛔ No tienes permiso para acceder a esa sección.')
+                return redirect('home')
+        except Usuario.DoesNotExist:
+            messages.error(request, '⛔ No tienes permiso para acceder a esa sección.')
+            return redirect('home')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+# ── Panel de Tutores del EC ────────────────────────────────────────
+class EcTutoresView(EcRequiredMixin, LoginRequiredMixin, TemplateView):
+    template_name = 'sat/ec/ec_tutores.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        carreras_ec = _get_ec_carreras(self.request)
+        carrera_filter = self.request.GET.get('carrera')
+
+        tutores_qs = Usuario.objects.filter(
+            rol__nombre='Tutor',
+            carrera__in=carreras_ec
+        ).select_related('carrera').order_by('carrera__nombre', 'apellido', 'nombre')
+
+        if carrera_filter:
+            tutores_qs = tutores_qs.filter(carrera__id_carrera=carrera_filter)
+
+        tutores_data = []
+        for tutor in tutores_qs:
+            total = Estudiante.objects.filter(tutor_asignado=tutor).count()
+            pct = min(int(total / CAPACIDAD_TUTOR * 100), 100) if CAPACIDAD_TUTOR else 0
+            if total == 0:
+                color = 'danger'    # tutor sin alumnos → atención
+            elif pct >= 100:
+                color = 'warning'   # al límite
+            elif pct >= 70:
+                color = 'primary'   # carga alta normal
+            else:
+                color = 'success'   # carga cómoda
+
+            tutores_data.append({
+                'tutor': tutor,
+                'total': total,
+                'pct': pct,
+                'color': color,
+                'sobre_limite': total > CAPACIDAD_TUTOR,
+            })
+
+        # Alumnos de las carreras del EC que no tienen tutor asignado (Solo generación actual)
+        from django.db.models import Max
+        ultima_gen = Estudiante.objects.filter(carrera__in=carreras_ec).aggregate(max_anio=Max('anio_ingreso'))['max_anio']
+
+        sin_tutor = Estudiante.objects.filter(
+            carrera__in=carreras_ec,
+            tutor_asignado__isnull=True,
+            anio_ingreso=ultima_gen
+        ).count() if ultima_gen else 0
+
+        # Paginación
+        paginator = Paginator(tutores_data, 15)
+        page_number = self.request.GET.get('page', 1)
+        page_obj = paginator.get_page(page_number)
+
+        context['page_obj'] = page_obj
+        context['is_paginated'] = paginator.num_pages > 1
+        context['carreras'] = carreras_ec
+        context['capacidad'] = CAPACIDAD_TUTOR
+        context['sin_tutor'] = sin_tutor
+        context['ultima_gen'] = ultima_gen
+        context['carrera_filter'] = carrera_filter or ''
+        return context
+
+
+# ── Detalle de un Tutor (alumnos asignados) ───────────────────────
+class EcTutorDetalleView(EcRequiredMixin, LoginRequiredMixin, TemplateView):
+    template_name = 'sat/ec/ec_tutor_detalle.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        carreras_ec = _get_ec_carreras(self.request)
+
+        tutor = get_object_or_404(
+            Usuario,
+            pk=self.kwargs['pk'],
+            rol__nombre='Tutor',
+            carrera__in=carreras_ec
+        )
+
+        estudiantes = Estudiante.objects.filter(
+            tutor_asignado=tutor
+        ).select_related('carrera').order_by('apellido', 'nombre')
+
+        # Tutores disponibles para reasignación: misma carrera, excluye al actual
+        tutores_disponibles = Usuario.objects.filter(
+            rol__nombre='Tutor',
+            carrera=tutor.carrera,
+            carrera__in=carreras_ec
+        ).exclude(pk=tutor.pk).order_by('apellido', 'nombre')
+
+        # Enriquecer estudiantes con etiquetas de riesgo
+        estudiantes_data = []
+        for est in estudiantes:
+            estudiantes_data.append({
+                'est': est,
+                'riesgo_label': RIESGO_LABEL.get(est.nivel_riesgo_ia, '?'),
+                'riesgo_color': RIESGO_COLOR.get(est.nivel_riesgo_ia, 'secondary'),
+            })
+
+        context['tutor'] = tutor
+        context['estudiantes_data'] = estudiantes_data
+        context['total'] = estudiantes.count()
+        context['tutores_disponibles'] = tutores_disponibles
+        context['capacidad'] = CAPACIDAD_TUTOR
+        context['sobre_limite'] = estudiantes.count() > CAPACIDAD_TUTOR
+        return context
+
+
+# ── Reasignar un estudiante individual ────────────────────────────
+@ec_required
+@login_required
+def ec_reasignar_estudiante(request, pk):
+    """POST: Cambia el tutor_asignado de un estudiante."""
+    carreras_ec = _get_ec_carreras(request)
+    estudiante = get_object_or_404(Estudiante, pk=pk, carrera__in=carreras_ec)
+
+    if request.method == 'POST':
+        tutor_destino_pk = request.POST.get('tutor_destino', '').strip()
+        from_tutor = request.POST.get('from_tutor', '').strip()
+
+        # Opción especial: quitar tutor (valor "0")
+        if tutor_destino_pk == '0':
+            estudiante.tutor_asignado = None
+            estudiante.save(update_fields=['tutor_asignado'])
+            messages.success(
+                request,
+                f'✅ {estudiante.nombre} {estudiante.apellido} quedó sin tutor asignado.'
+            )
+            if from_tutor:
+                return redirect('ec-tutor-detalle', pk=from_tutor)
+            return redirect('ec-tutores')
+
+        if not tutor_destino_pk:
+            messages.error(request, 'Debes seleccionar un tutor destino.')
+            if from_tutor:
+                return redirect('ec-tutor-detalle', pk=from_tutor)
+            return redirect('ec-tutores')
+
+        # Validar que el tutor destino sea de la misma carrera del tutorado
+        tutor_destino = get_object_or_404(
+            Usuario,
+            pk=tutor_destino_pk,
+            rol__nombre='Tutor',
+            carrera=estudiante.carrera,   # ← misma carrera que el tutorado
+            carrera__in=carreras_ec        # ← pertenece a las carreras del EC
+        )
+
+        tutor_anterior_pk = from_tutor or (
+            str(estudiante.tutor_asignado_id) if estudiante.tutor_asignado_id else None
+        )
+        estudiante.tutor_asignado = tutor_destino
+        estudiante.save(update_fields=['tutor_asignado'])
+
+        messages.success(
+            request,
+            f'✅ {estudiante.nombre} {estudiante.apellido} reasignado a {tutor_destino.get_full_name()}.'
+        )
+        if tutor_anterior_pk:
+            return redirect('ec-tutor-detalle', pk=tutor_anterior_pk)
+
+    return redirect('ec-tutores')
+
+
+# ── Reasignación masiva (todos los alumnos de un tutor) ───────────
+@ec_required
+@login_required
+def ec_reasignar_todo(request, pk):
+    """GET: formulario de selección | POST: mueve todos los alumnos a otro tutor."""
+    carreras_ec = _get_ec_carreras(request)
+
+    tutor_origen = get_object_or_404(
+        Usuario,
+        pk=pk,
+        rol__nombre='Tutor',
+        carrera__in=carreras_ec
+    )
+
+    # Solo tutores de la MISMA carrera como destino posible
+    tutores_destino = Usuario.objects.filter(
+        rol__nombre='Tutor',
+        carrera=tutor_origen.carrera,
+        carrera__in=carreras_ec
+    ).exclude(pk=pk).order_by('apellido', 'nombre')
+
+    estudiantes_qs = Estudiante.objects.filter(tutor_asignado=tutor_origen)
+    total_alumnos = estudiantes_qs.count()
+
+    if request.method == 'POST':
+        tutor_destino_pk = request.POST.get('tutor_destino', '').strip()
+
+        if not tutor_destino_pk:
+            messages.error(request, 'Debes seleccionar un tutor destino.')
+        else:
+            tutor_destino = get_object_or_404(
+                Usuario,
+                pk=tutor_destino_pk,
+                rol__nombre='Tutor',
+                carrera=tutor_origen.carrera,
+                carrera__in=carreras_ec
+            )
+            estudiantes_qs.update(tutor_asignado=tutor_destino)
+            messages.success(
+                request,
+                f'✅ {total_alumnos} alumno(s) reasignados de '
+                f'{tutor_origen.get_full_name()} → {tutor_destino.get_full_name()}.'
+            )
+            return redirect('ec-tutor-detalle', pk=tutor_destino.pk)
+
+    return render(request, 'sat/ec/ec_reasignar_todo.html', {
+        'tutor_origen': tutor_origen,
+        'tutores_destino': tutores_destino,
+        'total_alumnos': total_alumnos,
+        'capacidad': CAPACIDAD_TUTOR,
+    })
+
+
+# ── Asignar nuevos alumnos al tutor (desde 0) ─────────────────────
+@ec_required
+@login_required
+def ec_asignar_alumnos(request, pk):
+    """GET: muestra alumnos sin tutor de la carrera, filtro por ingreso | POST: los asigna al tutor."""
+    carreras_ec = _get_ec_carreras(request)
+    tutor_destino = get_object_or_404(
+        Usuario,
+        pk=pk,
+        rol__nombre='Tutor',
+        carrera__in=carreras_ec
+    )
+
+    if request.method == 'POST':
+        estudiantes_ids = request.POST.getlist('estudiantes')
+        if not estudiantes_ids:
+            messages.error(request, 'No seleccionaste a ningún estudiante para asignar.')
+        else:
+            # Validar que los ids pertenecen a la misma carrera y no tienen tutor
+            estudiantes_validos = Estudiante.objects.filter(
+                pk__in=estudiantes_ids,
+                carrera=tutor_destino.carrera,
+                tutor_asignado__isnull=True
+            )
+            cantidad = estudiantes_validos.count()
+            estudiantes_validos.update(tutor_asignado=tutor_destino)
+            messages.success(request, f'✅ {cantidad} estudiante(s) nuevos asignados a {tutor_destino.get_full_name()}.')
+            return redirect('ec-tutor-detalle', pk=tutor_destino.pk)
+
+    generacion_filtro = request.GET.get('generacion', '')
+    
+    # Buscar todos los estudiantes SIN TUTOR de la carrera del tutor
+    sin_tutor_qs = Estudiante.objects.filter(
+        carrera=tutor_destino.carrera,
+        tutor_asignado__isnull=True
+    ).order_by('apellido', 'nombre')
+
+    # Obtener generaciones disponibles de estos estudiantes sin tutor
+    generaciones_disponibles = list(
+        sin_tutor_qs.values_list('anio_ingreso', flat=True).distinct().order_by('-anio_ingreso')
+    )
+
+    if generacion_filtro:
+        sin_tutor_qs = sin_tutor_qs.filter(anio_ingreso=generacion_filtro)
+
+    # Paginación para no saturar la vista si son 900
+    from django.core.paginator import Paginator
+    paginator = Paginator(sin_tutor_qs, 30)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+
+    return render(request, 'sat/ec/ec_asignar_alumnos.html', {
+        'tutor_destino': tutor_destino,
+        'page_obj': page_obj,
+        'generaciones': generaciones_disponibles,
+        'generacion_filtro': generacion_filtro,
+        'total_sin_tutor': sin_tutor_qs.count(),
+        'is_paginated': paginator.num_pages > 1,
+    })
+
+
+# ── Acciones Masivas en Detalle del Tutor (Quitar / Reasignar) ─────────
+@ec_required
+@login_required
+def ec_acciones_masivas_tutorados(request, pk):
+    if request.method == 'POST':
+        carreras_ec = _get_ec_carreras(request)
+        tutor_actual = get_object_or_404(Usuario, pk=pk, rol__nombre='Tutor', carrera__in=carreras_ec)
+        
+        estudiantes_ids = request.POST.getlist('estudiantes')
+        accion = request.POST.get('accion')
+        
+        if not estudiantes_ids:
+            messages.error(request, 'Debes seleccionar al menos un estudiante.')
+            return redirect('ec-tutor-detalle', pk=tutor_actual.pk)
+            
+        estudiantes_validos = Estudiante.objects.filter(
+            pk__in=estudiantes_ids,
+            carrera=tutor_actual.carrera,
+            tutor_asignado=tutor_actual
+        )
+        cantidad = estudiantes_validos.count()
+
+        if accion == 'quitar':
+            estudiantes_validos.update(tutor_asignado=None)
+            messages.success(request, f'✅ Se ha quitado la asignación a {cantidad} estudiante(s).')
+        elif accion == 'reasignar':
+            tutor_destino_pk = request.POST.get('tutor_destino')
+            if not tutor_destino_pk:
+                messages.error(request, 'Debes seleccionar un tutor destino para reasignar masivamente.')
+            else:
+                tutor_destino = get_object_or_404(Usuario, pk=tutor_destino_pk, rol__nombre='Tutor', carrera=tutor_actual.carrera)
+                estudiantes_validos.update(tutor_asignado=tutor_destino)
+                messages.success(request, f'✅ {cantidad} estudiante(s) reasignados a {tutor_destino.get_full_name()}.')
+                
+    return redirect('ec-tutor-detalle', pk=pk)

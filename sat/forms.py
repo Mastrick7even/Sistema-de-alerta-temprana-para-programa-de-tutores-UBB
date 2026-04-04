@@ -163,3 +163,23 @@ class TutoriaForm(forms.ModelForm):
         # Formatear la fecha para datetime-local (formato: YYYY-MM-DDTHH:MM)
         if self.instance and self.instance.pk and self.instance.fecha:
             self.initial['fecha'] = self.instance.fecha.strftime('%Y-%m-%dT%H:%M')
+
+import os
+
+class CargaMasivaForm(forms.Form):
+    archivo = forms.FileField(
+        label='Archivo de Carga Masiva',
+        help_text='Selecciona un archivo con extensión .csv o .xlsx',
+        widget=forms.FileInput(attrs={
+            'class': 'form-control',
+            'accept': '.csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        })
+    )
+
+    def clean_archivo(self):
+        archivo = self.cleaned_data.get('archivo')
+        if archivo:
+            ext = os.path.splitext(archivo.name)[1].lower()
+            if ext not in ['.csv', '.xlsx']:
+                raise forms.ValidationError('Formato no soportado. Sube un archivo .csv o .xlsx')
+        return archivo

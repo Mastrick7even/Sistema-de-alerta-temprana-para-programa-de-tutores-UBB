@@ -166,6 +166,13 @@
               <span class="nav-link-text">Tablas Maestras</span>
             </a>
           </li>
+          <li class="nav-item">
+            <a class="nav-link {% if 'admin-sat/carga-masiva' in request.path %}active{% endif %}"
+              href="{% url 'admin-carga-masiva' %}">
+              <i class="ni ni-cloud-upload-96 text-primary"></i>
+              <span class="nav-link-text">Carga Masiva</span>
+            </a>
+          </li>
           {% endif %}
 
           <li class="nav-item">

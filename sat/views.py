@@ -1700,3 +1700,148 @@ def ec_acciones_masivas_tutorados(request, pk):
                 messages.success(request, f'✅ {cantidad} estudiante(s) reasignados a {tutor_destino.get_full_name()}.')
                 
     return redirect('ec-tutor-detalle', pk=pk)
+
+# ── Bloque 4: Carga Masiva ────────────────────────────────────────
+
+import pandas as pd
+import os
+from .forms import CargaMasivaForm
+
+class CargaMasivaView(SuperuserRequiredMixin, LoginRequiredMixin, TemplateView):
+    template_name = 'sat/admin/admin_carga_masiva.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if 'form' not in context:
+            context['form'] = CargaMasivaForm()
+        context['carreras'] = Carrera.objects.all().order_by('nombre')
+        return context
+
+    def post(self, request, *args, **kwargs):
+        form = CargaMasivaForm(request.POST, request.FILES)
+        context = self.get_context_data()
+        
+        if form.is_valid():
+            archivo = request.FILES['archivo']
+            ext = os.path.splitext(archivo.name)[1].lower()
+            try:
+                if ext == '.csv':
+                    df = pd.read_csv(archivo)
+                else:
+                    df = pd.read_excel(archivo)
+
+                df.columns = [str(c).strip().lower().replace('ñ', 'n') for c in df.columns]
+
+                col_map = {
+                    'año ingreso': 'anio_ingreso',
+                    'anio ingreso': 'anio_ingreso',
+                    'ano ingreso': 'anio_ingreso',
+                    'año_ingreso': 'anio_ingreso',
+                    'ano_ingreso': 'anio_ingreso',
+                    'nombre': 'nombres',
+                    'apellido': 'apellidos',
+                    'carrera': 'id_carrera',
+                    'codigo carrera': 'id_carrera',
+                    'id carrera': 'id_carrera',
+                    'rut alumno': 'rut'
+                }
+                df.rename(columns=col_map, inplace=True)
+                
+                required_cols = ['rut', 'nombres', 'apellidos', 'email', 'anio_ingreso', 'id_carrera']
+                missing = [col for col in required_cols if col not in df.columns]
+                
+                if missing:
+                    context['error'] = f"El archivo no contiene las columnas requeridas: {', '.join(missing)}."
+                    return self.render_to_response(context)
+                
+                creados = 0
+                actualizados = 0
+                errores = []
+
+                default_estado = Estado.objects.first()
+                if not default_estado:
+                    default_estado = Estado.objects.create(nombre="Vigente")
+
+                for index, row in df.iterrows():
+                    try:
+                        rut_val = str(row['rut']).strip()
+                        if pd.isna(row['rut']) or rut_val == 'nan' or rut_val == '':
+                            errores.append(f"Fila {index+2}: RUT vacío.")
+                            continue
+                            
+                        id_carrera_val = row['id_carrera']
+                        try:
+                            id_carrera_int = int(float(id_carrera_val))
+                            carrera_obj = Carrera.objects.get(pk=id_carrera_int)
+                        except (ValueError, Carrera.DoesNotExist):
+                            errores.append(f"Fila {index+2} (RUT: {rut_val}): ID de Carrera '{id_carrera_val}' es inválido o no existe.")
+                            continue
+
+                        anio_ingreso = row['anio_ingreso']
+                        if pd.isna(anio_ingreso):
+                            anio_ingreso = None
+                        else:
+                            try:
+                                anio_ingreso = int(float(anio_ingreso))
+                            except ValueError:
+                                anio_ingreso = None
+
+                        estudiante = Estudiante.objects.filter(rut=rut_val).first()
+                        if estudiante:
+                            estudiante.nombre = str(row['nombres']).strip() if not pd.isna(row['nombres']) else estudiante.nombre
+                            estudiante.apellido = str(row['apellidos']).strip() if not pd.isna(row['apellidos']) else estudiante.apellido
+                            estudiante.email = str(row['email']).strip() if not pd.isna(row['email']) else estudiante.email
+                            if anio_ingreso:
+                                estudiante.anio_ingreso = anio_ingreso
+                            estudiante.carrera = carrera_obj
+                            estudiante.save()
+                            actualizados += 1
+                        else:
+                            Estudiante.objects.create(
+                                rut=rut_val,
+                                nombre=str(row['nombres']).strip() if not pd.isna(row['nombres']) else 'Sin Nombre',
+                                apellido=str(row['apellidos']).strip() if not pd.isna(row['apellidos']) else 'Sin Apellidos',
+                                email=str(row['email']).strip() if not pd.isna(row['email']) else f"sin_correo_{rut_val}@ubiobio.cl",
+                                anio_ingreso=anio_ingreso,
+                                carrera=carrera_obj,
+                                estado_actual=default_estado
+                            )
+                            creados += 1
+                            
+                    except Exception as e:
+                        errores.append(f"Fila {index+2} (RUT: {rut_val}): Error inesperado - {str(e)}")
+
+                context['resultado'] = {
+                    'creados': creados,
+                    'actualizados': actualizados,
+                    'errores': errores,
+                    'total': len(df)
+                }
+
+                if errores:
+                    request.session['carga_masiva_errores'] = errores
+
+            except Exception as e:
+                context['error'] = f"Error general al procesar el archivo: {str(e)}"
+        else:
+            context['form'] = form
+
+        return self.render_to_response(context)
+
+from django.contrib.auth.decorators import user_passes_test
+
+@user_passes_test(lambda u: u.is_superuser)
+def descargar_errores_carga_masiva(request):
+    errores = request.session.get('carga_masiva_errores', [])
+    if not errores:
+        messages.info(request, "No hay errores guardados de la última carga masiva para descargar.")
+        return redirect('admin-carga-masiva')
+    
+    contenido = "Reporte de Errores - Carga Masiva SAT\n"
+    contenido += "="*50 + "\n\n"
+    for err in errores:
+        contenido += f"- {err}\n"
+    
+    response = HttpResponse(contenido, content_type='text/plain')
+    response['Content-Disposition'] = 'attachment; filename="errores_carga_masiva.txt"'
+    return response

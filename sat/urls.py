@@ -11,6 +11,8 @@ from .views import (
     admin_maestras, admin_maestra_accion, admin_generar_password,
     # Bloque 3: Gestión Tutores EC
     EcTutoresView, EcTutorDetalleView, ec_reasignar_estudiante, ec_reasignar_todo, ec_asignar_alumnos, ec_acciones_masivas_tutorados,
+    # Bloque 4: Carga Masiva
+    CargaMasivaView, descargar_errores_carga_masiva
 )
 
 urlpatterns = [
@@ -54,6 +56,8 @@ urlpatterns = [
     path('admin-sat/maestras/', admin_maestras, name='admin-maestras'),
     path('admin-sat/maestras/<str:modelo>/', admin_maestra_accion, name='admin-maestra-crear'),
     path('admin-sat/maestras/<str:modelo>/<int:pk>/', admin_maestra_accion, name='admin-maestra-editar'),
+    path('admin-sat/carga-masiva/', CargaMasivaView.as_view(), name='admin-carga-masiva'),
+    path('admin-sat/carga-masiva/descargar-errores/', descargar_errores_carga_masiva, name='admin-descargar-errores'),
 
     # ── Bloque 3: Gestión Tutores para EC ──────────────────────────
     path('ec/tutores/', EcTutoresView.as_view(), name='ec-tutores'),

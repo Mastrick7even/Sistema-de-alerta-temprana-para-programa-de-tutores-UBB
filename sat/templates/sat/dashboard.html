@@ -132,37 +132,63 @@
 <div class="container-fluid mt--6">
   {% if es_encargado or user.is_superuser %}
   <div class="row">
-    <div class="col-xl-4">
-      <div class="card">
+    <!-- 1. Tasa de Contacto (Donut) -->
+    <div class="col-xl-4 mb-4">
+      <div class="card shadow h-100">
         <div class="card-header bg-transparent">
-          <div class="row align-items-center">
-            <div class="col">
-              <h6 class="text-uppercase text-muted ls-1 mb-1">Vista General</h6>
-              <h5 class="h3 mb-0">Distribución de Riesgo</h5>
-            </div>
-          </div>
+          <h6 class="text-uppercase text-muted ls-1 mb-1">Rendimiento</h6>
+          <h5 class="h3 mb-0">Tasa de Contacto</h5>
         </div>
         <div class="card-body">
           <div class="chart">
-            <canvas id="chart-riesgo" class="chart-canvas"></canvas>
+            <canvas id="chart-contacto" class="chart-canvas"></canvas>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="col-xl-8">
-      <div class="card">
+    <!-- 2. Riesgo por Carrera (Stacked Bar) -->
+    <div class="col-xl-8 mb-4">
+      <div class="card shadow h-100">
         <div class="card-header bg-transparent">
-          <div class="row align-items-center">
-            <div class="col">
-              <h6 class="text-uppercase text-muted ls-1 mb-1">Tendencia</h6>
-              <h5 class="h3 mb-0">Estudiantes por Año de Ingreso</h5>
-            </div>
-          </div>
+          <h6 class="text-uppercase text-muted ls-1 mb-1">Foco por Escuela</h6>
+          <h5 class="h3 mb-0">Distribución de Riesgo IA por Carrera</h5>
         </div>
         <div class="card-body">
           <div class="chart">
-            <canvas id="chart-ingreso" class="chart-canvas"></canvas>
+            <canvas id="chart-carreras" class="chart-canvas"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- 3. Evolución Mensual (Line) -->
+    <div class="col-xl-8 mb-4">
+      <div class="card shadow h-100">
+        <div class="card-header bg-transparent">
+          <h6 class="text-uppercase text-muted ls-1 mb-1">Tendencia Semestral</h6>
+          <h5 class="h3 mb-0">Evolución de Intervenciones</h5>
+        </div>
+        <div class="card-body">
+          <div class="chart">
+            <canvas id="chart-evolucion" class="chart-canvas"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Top Alertas (Horizontal Bar) -->
+    <div class="col-xl-4 mb-4">
+      <div class="card shadow h-100">
+        <div class="card-header bg-transparent">
+          <h6 class="text-uppercase text-muted ls-1 mb-1">Ranking</h6>
+          <h5 class="h3 mb-0">Top 5 Alertas Frecuentes</h5>
+        </div>
+        <div class="card-body">
+          <div class="chart">
+            <canvas id="chart-alertas" class="chart-canvas"></canvas>
           </div>
         </div>
       </div>
@@ -594,78 +620,110 @@
 
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    // === GRÁFICO DONUT (Distribución de Riesgo) ===
-    var ctx = document.getElementById('chart-riesgo').getContext('2d');
-
-    // Datos desde Django (con valores por defecto si no existen)
-    var datosRiesgo = {% if data_grafico %}{{ data_grafico| safe }}{% else %}[0, 0, 0]{% endif %};
-
-  var chart = new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-      labels: ['Riesgo Alto', 'Riesgo Medio', 'Riesgo Bajo', 'Sin Riesgo', 'Sin Contacto'],
-      datasets: [{
-        data: {{ data_grafico|safe }},
-        // Asegúrate de tener 5 colores aquí también:
-        backgroundColor: ['#ef4444', '#f97316', '#22c55e', '#3b82f6', '#8b5cf6'],
-        borderWidth: 0
-    }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      legend: {
-        position: 'right',
-        labels: {
-          usePointStyle: true,
-          padding: 20,
-          fontSize: 12
-        }
+    
+    // 1. CHART CONTACTO (Doughnut)
+    var ctx1 = document.getElementById('chart-contacto').getContext('2d');
+    new Chart(ctx1, {
+      type: 'doughnut',
+      data: {
+        labels: ['Contactados', 'Sin Contacto (Ghosting)'],
+        datasets: [{
+          data: [{{ tasa_contactados }}, {{ tasa_nocontactados }}],
+          backgroundColor: ['#2dce89', '#8898aa'],
+          borderWidth: 0
+        }]
       },
-      cutoutPercentage: 70,
-      tooltips: {
-        callbacks: {
-          label: function (tooltipItem, data) {
-            var dataset = data.datasets[tooltipItem.datasetIndex];
-            var total = dataset.data.reduce(function (previousValue, currentValue) {
-              return previousValue + currentValue;
-            });
-            var currentValue = dataset.data[tooltipItem.index];
-            var percentage = Math.floor(((currentValue / total) * 100) + 0.5);
-            return data.labels[tooltipItem.index] + ": " + currentValue + " (" + percentage + "%)";
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutoutPercentage: 75,
+        legend: { position: 'bottom' }
+      }
+    });
+
+    // 2. CHART CARRERAS (Stacked Bar)
+    var ctx2 = document.getElementById('chart-carreras').getContext('2d');
+    new Chart(ctx2, {
+      type: 'bar',
+      data: {
+        labels: {{ chart_carreras_labels|safe }},
+        datasets: [
+          {
+            label: 'Riesgo Alto',
+            backgroundColor: '#f5365c',
+            data: {{ chart_carreras_alto|safe }}
+          },
+          {
+            label: 'Riesgo Medio',
+            backgroundColor: '#fb6340',
+            data: {{ chart_carreras_medio|safe }}
+          },
+          {
+            label: 'Riesgo Bajo',
+            backgroundColor: '#2dce89',
+            data: {{ chart_carreras_bajo|safe }}
           }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          xAxes: [{ stacked: true }],
+          yAxes: [{ stacked: true, ticks: { beginAtZero: true, stepSize: 1 } }]
         }
       }
-    }
-  });
-
-  // === GRÁFICO DE BARRAS (Estudiantes por Año de Ingreso) ===
-  var ctx2 = document.getElementById('chart-ingreso').getContext('2d');
-  var chart2 = new Chart(ctx2, {
-    type: 'bar',
-    data: {
-      labels: {{ labels_ingreso| safe }},
-  datasets: [{
-    label: 'Estudiantes',
-    data: {{ data_ingreso| safe }},
-    backgroundColor: '#5e72e4',
-    barThickness: 20
-            }]
-        },
-  options: {
-    responsive: true,
-      maintainAspectRatio: false,
-        scales: {
-      yAxes: [{
-        ticks: {
-          beginAtZero: true,
-          stepSize: 1
-        }
-      }]
-    }
-  }
     });
-});
+
+    // 3. CHART EVOLUCIÓN (Line)
+    var ctx3 = document.getElementById('chart-evolucion').getContext('2d');
+    new Chart(ctx3, {
+      type: 'line',
+      data: {
+        labels: {{ chart_evolucion_labels|safe }},
+        datasets: [{
+          label: 'Intervenciones por Mes',
+          data: {{ chart_evolucion_data|safe }},
+          borderColor: '#5e72e4',
+          backgroundColor: 'rgba(94, 114, 228, 0.1)',
+          borderWidth: 3,
+          pointBackgroundColor: '#5e72e4',
+          pointRadius: 4,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          yAxes: [{ ticks: { beginAtZero: true, stepSize: 1 } }]
+        }
+      }
+    });
+
+    // 4. CHART ALERTAS (Horizontal Bar)
+    var ctx4 = document.getElementById('chart-alertas').getContext('2d');
+    new Chart(ctx4, {
+      type: 'horizontalBar',
+      data: {
+        labels: {{ chart_alertas_labels|safe }},
+        datasets: [{
+          label: 'Frecuencia',
+          data: {{ chart_alertas_data|safe }},
+          backgroundColor: '#ffd600',
+          barThickness: 15
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          xAxes: [{ ticks: { beginAtZero: true, stepSize: 1 } }]
+        }
+      }
+    });
+
+  });
 </script>
 
 {% endblock content %}

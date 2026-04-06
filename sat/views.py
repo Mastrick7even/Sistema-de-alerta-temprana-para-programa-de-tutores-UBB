@@ -312,7 +312,65 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         else:
             ultimas_bitacoras = ultimas_bitacoras.order_by('-fecha_registro')
 
-        # 4. Inyectar datos al HTML
+        # 4. GRÁFICOS BLOQUE 6 (Preparar datos para Chart.js)
+        import json
+        from django.db.models import Count, Q
+        from django.db.models.functions import TruncMonth
+        from datetime import timedelta
+        from django.utils import timezone
+
+        # A. Tasa de Contacto (Pie Chart)
+        contactados = mis_estudiantes.filter(bitacora__isnull=False).distinct().count()
+        no_contactados = total_estudiantes - contactados
+        context['tasa_contactados'] = contactados
+        context['tasa_nocontactados'] = no_contactados
+
+        # B. Top Alertas (Horizontal Bar Chart)
+        top_alertas = Bitacora.objects.filter(
+            estudiante__in=mis_estudiantes, alarma__isnull=False
+        ).values('alarma__tipo_alarma__nombre').annotate(
+            total=Count('id_bitacora')
+        ).order_by('-total')[:5]
+        
+        context['chart_alertas_labels'] = json.dumps([a['alarma__tipo_alarma__nombre'] or 'Sin tipo' for a in top_alertas])
+        context['chart_alertas_data'] = json.dumps([a['total'] for a in top_alertas])
+
+        # C. Distribución de Riesgo por Carrera (Stacked Bar Chart)
+        # Reemplazo de la métrica por cohorte, solicitado por el usuario
+        riesgo_por_carrera = mis_estudiantes.values('carrera__nombre').annotate(
+            alto=Count('id_estudiante', filter=Q(nivel_riesgo_ia__in=[3,4])),
+            medio=Count('id_estudiante', filter=Q(nivel_riesgo_ia=2)),
+            bajo=Count('id_estudiante', filter=Q(nivel_riesgo_ia=1))
+        ).order_by('carrera__nombre')
+
+        context['chart_carreras_labels'] = json.dumps([c['carrera__nombre'] for c in riesgo_por_carrera])
+        context['chart_carreras_alto'] = json.dumps([c['alto'] for c in riesgo_por_carrera])
+        context['chart_carreras_medio'] = json.dumps([c['medio'] for c in riesgo_por_carrera])
+        context['chart_carreras_bajo'] = json.dumps([c['bajo'] for c in riesgo_por_carrera])
+
+        # D. Evolución de Contacto mensual (En lugar de riesgo_ia que es muy inestable diario, 
+        # medimos la cantidad de intervenciones/bitácoras mensuales de estos alumnos)
+        seis_meses_atras = timezone.now() - timedelta(days=180)
+        evolucion = Bitacora.objects.filter(
+            estudiante__in=mis_estudiantes, 
+            fecha_registro__gte=seis_meses_atras
+        ).annotate(
+            mes=TruncMonth('fecha_registro')
+        ).values('mes').annotate(total=Count('id_bitacora')).order_by('mes')
+
+        # Formatear a 'MMM-YY'
+        labels_meses = []
+        data_meses = []
+        for ev in evolucion:
+            if ev['mes']:
+                mes_str = ev['mes'].strftime('%b %Y')
+                labels_meses.append(mes_str)
+                data_meses.append(ev['total'])
+                
+        context['chart_evolucion_labels'] = json.dumps(labels_meses)
+        context['chart_evolucion_data'] = json.dumps(data_meses)
+
+        # Inyectar KPIs simples
         context['kpi_total'] = total_estudiantes
         context['kpi_alto'] = riesgo_alto
         context['kpi_medio'] = riesgo_medio

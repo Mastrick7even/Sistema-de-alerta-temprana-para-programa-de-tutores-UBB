@@ -3,10 +3,10 @@ from django.contrib import admin
 # Register your models here.
 
 from .models import (
-    Usuario, Rol, Carrera, Estudiante, 
+    Usuario, Rol, Carrera, Estudiante,
     Estado, TipoDesercion, HistorialEstado,
     Tutoria, TipoTutoria, ClasificacionTutoria, Asistencia,
-    Bitacora, Alarma, TipoAlarma
+    Bitacora, Alarma, TipoAlarma, Notificacion, HistorialRiesgo
 )
 
 # Registro básico de modelos
@@ -27,3 +27,5 @@ admin.site.register(Tutoria)
 admin.site.register(Asistencia)
 admin.site.register(Bitacora)
 admin.site.register(Alarma)
+admin.site.register(Notificacion)
+admin.site.register(HistorialRiesgo)

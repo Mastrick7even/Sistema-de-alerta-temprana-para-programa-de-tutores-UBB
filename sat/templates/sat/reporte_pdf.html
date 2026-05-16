@@ -229,33 +229,25 @@
         </div>
     </div>
 
-    {% if estudiante.lugar_procedencia or estudiante.grupo_familiar or estudiante.beneficios_sociales %}
     <h2>Información Socioeconómica</h2>
     <div class="profile-section">
         <div class="profile-grid">
-            {% if estudiante.lugar_procedencia %}
             <div class="profile-row">
                 <span class="profile-label">Procedencia:</span>
-                <span class="profile-value">{{ estudiante.lugar_procedencia }}</span>
+                <span class="profile-value">{% if estudiante.lugar_procedencia %}{{ estudiante.lugar_procedencia }}{% else %}<span style="color: #999;">No registrada</span>{% endif %}</span>
             </div>
             <br>
-            {% endif %}
-            {% if estudiante.grupo_familiar %}
             <div class="profile-row">
                 <span class="profile-label">Grupo Familiar:</span>
-                <span class="profile-value">{{ estudiante.grupo_familiar }}</span>
+                <span class="profile-value">{% if estudiante.grupo_familiar %}{{ estudiante.grupo_familiar }}{% else %}<span style="color: #999;">No registrado</span>{% endif %}</span>
             </div>
             <br>
-            {% endif %}
-            {% if estudiante.beneficios_sociales %}
             <div class="profile-row">
                 <span class="profile-label">Beneficios:</span>
-                <span class="profile-value">{{ estudiante.beneficios_sociales }}</span>
+                <span class="profile-value">{% if estudiante.beneficios_sociales %}{{ estudiante.beneficios_sociales }}{% else %}<span style="color: #999;">No registrados</span>{% endif %}</span>
             </div>
-            {% endif %}
         </div>
     </div>
-    {% endif %}
 
     {% if historial_riesgo %}
     <h2>Historial de Riesgo</h2>

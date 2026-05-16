@@ -417,10 +417,14 @@ class ReporteEstudiantePDF(LoginRequiredMixin, DetailView):
         # Obtenemos las bitácoras ordenadas
         bitacoras = Bitacora.objects.filter(estudiante=estudiante).order_by('-fecha_registro')
         
+        # Obtenemos el historial de riesgo
+        historial_riesgo = HistorialRiesgo.objects.filter(estudiante=estudiante).order_by('-fecha_cambio')
+        
         # Contexto para el template
         context = {
             'estudiante': estudiante,
             'bitacoras': bitacoras,
+            'historial_riesgo': historial_riesgo,
             'usuario_generador': request.user,
         }
         

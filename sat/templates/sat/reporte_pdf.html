@@ -229,6 +229,74 @@
         </div>
     </div>
 
+    {% if estudiante.lugar_procedencia or estudiante.grupo_familiar or estudiante.beneficios_sociales %}
+    <h2>Información Socioeconómica</h2>
+    <div class="profile-section">
+        <div class="profile-grid">
+            {% if estudiante.lugar_procedencia %}
+            <div class="profile-row">
+                <span class="profile-label">Procedencia:</span>
+                <span class="profile-value">{{ estudiante.lugar_procedencia }}</span>
+            </div>
+            <br>
+            {% endif %}
+            {% if estudiante.grupo_familiar %}
+            <div class="profile-row">
+                <span class="profile-label">Grupo Familiar:</span>
+                <span class="profile-value">{{ estudiante.grupo_familiar }}</span>
+            </div>
+            <br>
+            {% endif %}
+            {% if estudiante.beneficios_sociales %}
+            <div class="profile-row">
+                <span class="profile-label">Beneficios:</span>
+                <span class="profile-value">{{ estudiante.beneficios_sociales }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if historial_riesgo %}
+    <h2>Historial de Riesgo</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 100px;">Fecha</th>
+                <th style="width: 80px;">Tendencia</th>
+                <th style="width: 80px;">Cambio</th>
+                <th>Origen</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for h in historial_riesgo %}
+            <tr>
+                <td>{{ h.fecha_cambio|date:"d/m/Y H:i" }}</td>
+                <td>
+                    {% if h.riesgo_nuevo > h.riesgo_anterior %}
+                        <span style="color: #f5365c; font-weight: bold;">Subió</span>
+                    {% elif h.riesgo_nuevo < h.riesgo_anterior %}
+                        <span style="color: #2dce89; font-weight: bold;">Bajó</span>
+                    {% else %}
+                        <span style="color: #8898aa;">Igual</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {{ h.riesgo_anterior }} &rarr; {{ h.riesgo_nuevo }}
+                </td>
+                <td>
+                    {% if h.origen_cambio == 'ML' %}
+                        <span style="background-color: #172b4d; color: white; padding: 2px 6px; border-radius: 10px; font-size: 9px; font-weight: bold;">IA</span>
+                    {% else %}
+                        <span style="background-color: #11cdef; color: white; padding: 2px 6px; border-radius: 10px; font-size: 9px; font-weight: bold;">Manual</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
     <h2>Historial de Seguimiento y Bitácora</h2>
 
     {% if bitacoras %}

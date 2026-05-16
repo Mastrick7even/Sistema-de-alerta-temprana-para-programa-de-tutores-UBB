@@ -8,7 +8,8 @@ import warnings
 warnings.filterwarnings('ignore', category=UserWarning)
 
 # --- CONFIGURACIÓN ---
-CARPETA_DATOS = r"C:\Universidad del Biobio\Sistema-de-alerta-temprana-para-programa-de-tutores-UBB\data_analysis\process_data\raw_data"
+# Ruta dinámica basada en la ubicación de este script
+CARPETA_DATOS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "raw_data")
 ARCHIVO_SALIDA = "bitacora_estructurada_final.csv"
 
 HOJAS_IGNORAR = [

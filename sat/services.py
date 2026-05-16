@@ -8,9 +8,9 @@ from .models import Estudiante, Bitacora
 
 class PredictorRiesgo:
     def __init__(self):
-        # Ruta dinámica y a prueba de balas
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        self.model_path = os.path.join(project_root,'Sistema-de-alerta-temprana-para-programa-de-tutores-UBB', 'sat', 'ml_models', 'modelo_sat.pkl')
+        # Ruta dinámica y a prueba de balas (sin hardcodear el nombre de la carpeta del proyecto)
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self.model_path = os.path.join(project_root, 'sat', 'ml_models', 'modelo_sat.pkl')
         self.cerebro = None
         self.cargar_modelo()
 

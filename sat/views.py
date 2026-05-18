@@ -693,22 +693,182 @@ class ReporteAsistenciaView(LoginRequiredMixin, ListView):
 
         return queryset
 
+    def get(self, request, *args, **kwargs):
+        if request.GET.get('exportar_excel') == '1':
+            user = self.request.user
+            es_encargado = False
+            
+            if user.is_superuser:
+                es_encargado = True
+            else:
+                try:
+                    perfil = Usuario.objects.get(email=user.email)
+                    if perfil.rol.nombre == 'Encargado de Carrera':
+                        es_encargado = True
+                except Usuario.DoesNotExist:
+                    pass
+            
+            if es_encargado:
+                queryset = self.get_queryset()
+                return self.exportar_excel(queryset)
+            else:
+                from django.contrib import messages
+                messages.error(request, "No tienes permisos para exportar Excel.")
+                # Remover 'exportar_excel' de request.GET no es trivial, pero podemos continuar normal
+                # y no se exportará
+        return super().get(request, *args, **kwargs)
+
+    def exportar_excel(self, queryset):
+        import openpyxl
+        from django.http import HttpResponse
+        from openpyxl.styles import Font, Alignment
+        from .models import Asistencia
+
+        wb = openpyxl.Workbook()
+        
+        # --- Hoja 1: Detalle de Asistencias ---
+        ws1 = wb.active
+        ws1.title = "Detalle Asistencias"
+
+        # Headers
+        headers1 = ['RUT', 'Nombre estudiante', 'Carrera', 'Fecha tutoría', 'Nombre tutoria', 'Tutor responsable', 'Estado de asistencia']
+        ws1.append(headers1)
+
+        for col in range(1, len(headers1) + 1):
+            cell = ws1.cell(row=1, column=col)
+            cell.font = Font(bold=True)
+            cell.alignment = Alignment(horizontal='center')
+
+        # Data for sheet 1
+        asistencias = Asistencia.objects.filter(estudiante__in=queryset).select_related(
+            'estudiante', 'estudiante__carrera', 'tutoria', 'tutoria__tutor'
+        ).order_by('estudiante__apellido', 'tutoria__fecha')
+
+        resumen_tutorias = {}
+
+        for asis in asistencias:
+            est = asis.estudiante
+            tut = asis.tutoria
+            tutor = tut.tutor.get_full_name() if tut.tutor else 'Sin Tutor'
+            
+            fecha_str = tut.fecha.strftime('%d-%m-%Y %H:%M') if tut.fecha else ''
+            nombre_tutoria = tut.tema_tutoria or 'Sin Nombre'
+            
+            row = [
+                est.rut,
+                f"{est.nombre} {est.apellido}",
+                est.carrera.nombre if est.carrera else 'Sin Carrera',
+                fecha_str,
+                nombre_tutoria,
+                tutor,
+                asis.estado_asistencia
+            ]
+            ws1.append(row)
+            
+            # Recolectar datos para la Hoja 2
+            t_id = tut.id_tutoria
+            if t_id not in resumen_tutorias:
+                resumen_tutorias[t_id] = {
+                    'tutoria': tut,
+                    'presente': 0,
+                    'ausente': 0,
+                    'justificado': 0,
+                    'total': 0
+                }
+            
+            estado = (asis.estado_asistencia or '').lower()
+            if 'presente' in estado:
+                resumen_tutorias[t_id]['presente'] += 1
+            elif 'ausente' in estado:
+                resumen_tutorias[t_id]['ausente'] += 1
+            elif 'justificado' in estado:
+                resumen_tutorias[t_id]['justificado'] += 1
+                
+            resumen_tutorias[t_id]['total'] += 1
+
+        for col_idx, col_cells in enumerate(ws1.columns, 1):
+            max_length = 0
+            for cell in col_cells:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = (max_length + 2)
+            ws1.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = adjusted_width
+
+        # --- Hoja 2: Detalle por Tutoría ---
+        ws2 = wb.create_sheet(title="Consolidado por Tutoría")
+        
+        headers2 = ['Nombre de tutoria', 'Fecha de tutoria', 'Tutor responsable', 'Asistentes', 'Ausentes', 'Justificados', 'Porcentaje de asistencia']
+        ws2.append(headers2)
+
+        for col in range(1, len(headers2) + 1):
+            cell = ws2.cell(row=1, column=col)
+            cell.font = Font(bold=True)
+            cell.alignment = Alignment(horizontal='center')
+            
+        for t_id, data in resumen_tutorias.items():
+            tut = data['tutoria']
+            total = data['total']
+            asistentes = data['presente']
+            ausentes = data['ausente']
+            justificados = data['justificado']
+            
+            porcentaje = f"{(asistentes / total * 100):.1f}%" if total > 0 else "0.0%"
+            tutor = tut.tutor.get_full_name() if tut.tutor else 'Sin Tutor'
+            fecha_str = tut.fecha.strftime('%d-%m-%Y %H:%M') if tut.fecha else ''
+            nombre_tutoria = tut.tema_tutoria or 'Sin Nombre'
+            
+            row2 = [
+                nombre_tutoria,
+                fecha_str,
+                tutor,
+                asistentes,
+                ausentes,
+                justificados,
+                porcentaje
+            ]
+            ws2.append(row2)
+
+        for col_idx, col_cells in enumerate(ws2.columns, 1):
+            max_length = 0
+            for cell in col_cells:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = (max_length + 2)
+            ws2.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = adjusted_width
+
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="Reporte_Asistencias.xlsx"'
+        wb.save(response)
+        return response
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user = self.request.user
+
+        context['es_encargado'] = False
+        context['es_tutor'] = False
 
         # Filtrar carreras y tutores según el rol
         if user.is_superuser:
             context['carreras'] = Carrera.objects.all()
             context['tutores'] = Usuario.objects.filter(rol__nombre='Tutor')
+            context['es_encargado'] = True
         else:
             try:
                 perfil = Usuario.objects.get(email=user.email)
                 if perfil.rol.nombre == 'Tutor':
+                    context['es_tutor'] = True
                     # El tutor no necesita dropdown de carreras ni tutores
                     ids_c = Estudiante.objects.filter(tutor_asignado=perfil).values_list('carrera', flat=True).distinct()
                     context['carreras'] = Carrera.objects.filter(id_carrera__in=ids_c)
                 elif perfil.rol.nombre == 'Encargado de Carrera':
+                    context['es_encargado'] = True
                     carreras_ec = Carrera.objects.filter(encargado=perfil)
                     context['carreras'] = carreras_ec
                     # Solo tutores de las carreras del EC

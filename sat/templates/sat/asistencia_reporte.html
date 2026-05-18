@@ -26,7 +26,7 @@
                                     placeholder="Buscar alumno..." value="{{ request.GET.q }}">
                             </div>
 
-                            {% if request.user.rol.nombre != 'Tutor' %}
+                            {% if not es_tutor %}
                             <div class="col-md-3">
                                 <select name="carrera" class="form-control form-control-sm">
                                     <option value="">Todas las Carreras</option>
@@ -44,8 +44,13 @@
                             </div>
                             {% endif %}
 
-                            <div class="col-md-2">
-                                <button type="submit" class="btn btn-sm btn-primary btn-block">Filtrar</button>
+                            <div class="col-md-3 d-flex">
+                                <button type="submit" class="btn btn-sm btn-primary flex-grow-1 mr-2">Filtrar</button>
+                                {% if es_encargado %}
+                                <button type="submit" name="exportar_excel" value="1" class="btn btn-sm btn-success flex-grow-1" title="Exportar a Excel">
+                                    <i class="fas fa-file-excel"></i> Exportar
+                                </button>
+                                {% endif %}
                             </div>
                         </div>
                     </form>

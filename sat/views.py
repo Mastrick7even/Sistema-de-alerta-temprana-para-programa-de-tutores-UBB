@@ -274,6 +274,16 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             except Usuario.DoesNotExist:
                 mis_estudiantes = Estudiante.objects.none()
 
+        # Filtro global de carrera (aplica a KPIs, gráficos y bitácoras)
+        carreras_seleccionadas = self.request.GET.getlist('carrera_dashboard')
+        # Limpiar posibles valores vacíos
+        carreras_seleccionadas = [c for c in carreras_seleccionadas if c]
+        
+        if carreras_seleccionadas:
+            mis_estudiantes = mis_estudiantes.filter(carrera__id_carrera__in=carreras_seleccionadas)
+
+        context['carreras_seleccionadas'] = carreras_seleccionadas
+
         # 2. Calcular KPIs (Indicadores) BASADOS EN IA
         total_estudiantes = mis_estudiantes.count()
         
@@ -291,11 +301,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
         ultimas_bitacoras = Bitacora.objects.filter(estudiante__in=mis_estudiantes)
         
-        # Filtros (Carrera, Fechas, Alerta)
-        carrera_filter = self.request.GET.get('carrera_dashboard')
-        if carrera_filter:
-            ultimas_bitacoras = ultimas_bitacoras.filter(estudiante__carrera__id_carrera=carrera_filter)
-        
+        # Filtros (Fechas, Alerta)
         fecha_desde = self.request.GET.get('fecha_desde')
         fecha_hasta = self.request.GET.get('fecha_hasta')
         if fecha_desde:
@@ -307,7 +313,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         if alerta_filter:
             ultimas_bitacoras = ultimas_bitacoras.filter(alarma__tipo_alarma__id_tipo=alerta_filter)
         
-        if not any([carrera_filter, fecha_desde, fecha_hasta, alerta_filter]):
+        if not any([fecha_desde, fecha_hasta, alerta_filter]):
             ultimas_bitacoras = ultimas_bitacoras.order_by('-fecha_registro')[:5]
         else:
             ultimas_bitacoras = ultimas_bitacoras.order_by('-fecha_registro')

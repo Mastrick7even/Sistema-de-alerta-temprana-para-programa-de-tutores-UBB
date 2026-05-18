@@ -18,23 +18,6 @@
             font-size: 12px;
         }
 
-        /* Encabezado */
-        .header {
-            border-bottom: 2px solid #0056b3;
-            /* Azul UBB */
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .header h1 {
-            color: #0056b3;
-            margin: 0;
-            font-size: 18px;
-            text-transform: uppercase;
-        }
-
         .meta-info {
             text-align: right;
             font-size: 10px;
@@ -71,33 +54,19 @@
             display: table-cell;
         }
 
-        /* Estado de Riesgo */
+        /* Estado de Riesgo (Texto en lugar de fondo para mejor renderizado PDF) */
         .risk-badge {
             display: inline-block;
-            padding: 5px 10px;
-            color: white;
             font-weight: bold;
-            border-radius: 4px;
             text-transform: uppercase;
-            font-size: 10px;
+            font-size: 11px;
         }
 
-        .bg-danger {
-            background-color: #f5365c;
-        }
-
-        /* Rojo */
-        .bg-warning {
-            background-color: #fb6340;
-        }
-
-        /* Naranja */
-        .bg-success {
-            background-color: #2dce89;
-        }
-
-        /* Verde */
-
+        .text-danger { color: #f5365c; }
+        .text-warning { color: #fb6340; }
+        .text-success { color: #2dce89; }
+        .text-info { color: #11cdef; }
+        .text-secondary { color: #8898aa; }
         /* Historial / Bitácora */
         h2 {
             font-size: 14px;
@@ -170,14 +139,12 @@
 
 <body>
 
-    <div class="header">
-        <div>
-            <h1>Ficha Integral del Estudiante</h1>
-            <span>Sistema de Alerta Temprana - UBB</span>
-        </div>
-        <div class="meta-info">
-            <p>Generado por: {{ usuario_generador.get_full_name }}</p>
-            <p>Fecha: {% now "d/m/Y H:i" %}</p>
+    <div style="margin-bottom: 20px;">
+        <h1 style="color: #0056b3; margin: 0; font-size: 18px; text-transform: uppercase;">Ficha Integral del Estudiante</h1>
+        <p style="font-size: 12px; color: #333; margin: 5px 0 10px 0;">Plataforma de Seguimiento Estudiantil - UBB</p>
+        <div style="font-size: 10px; color: #666;">
+            Generado por: {{ usuario_generador.get_full_name }}<br>
+            Fecha: {% now "d/m/Y H:i" %}
         </div>
     </div>
 
@@ -215,14 +182,18 @@
             </div>
             <br>
             <div class="profile-row">
-                <span class="profile-label">Estado Actual:</span>
+                <span class="profile-label">Nivel de Riesgo:</span>
                 <span class="profile-value">
-                    {% if "Alto" in estudiante.estado_actual.nombre %}
-                    <span class="risk-badge bg-danger">{{ estudiante.estado_actual.nombre }}</span>
-                    {% elif "Medio" in estudiante.estado_actual.nombre %}
-                    <span class="risk-badge bg-warning">{{ estudiante.estado_actual.nombre }}</span>
+                    {% if estudiante.nivel_riesgo_ia == 3 or estudiante.nivel_riesgo_ia == 4 %}
+                    <span class="risk-badge text-danger">Riesgo Alto</span>
+                    {% elif estudiante.nivel_riesgo_ia == 2 %}
+                    <span class="risk-badge text-warning">Riesgo Medio</span>
+                    {% elif estudiante.nivel_riesgo_ia == 1 %}
+                    <span class="risk-badge text-success">Riesgo Bajo</span>
+                    {% elif estudiante.nivel_riesgo_ia == 0 %}
+                    <span class="risk-badge text-info">Sin Riesgo</span>
                     {% else %}
-                    <span class="risk-badge bg-success">{{ estudiante.estado_actual.nombre }}</span>
+                    <span class="risk-badge text-secondary">Sin Contacto</span>
                     {% endif %}
                 </span>
             </div>
@@ -256,7 +227,7 @@
             <tr>
                 <th style="width: 100px;">Fecha</th>
                 <th style="width: 80px;">Tendencia</th>
-                <th style="width: 80px;">Cambio</th>
+                <th style="width: 140px; white-space: nowrap;">Cambio</th>
                 <th>Origen</th>
             </tr>
         </thead>
@@ -273,14 +244,14 @@
                         <span style="color: #8898aa;">Igual</span>
                     {% endif %}
                 </td>
-                <td>
-                    {{ h.riesgo_anterior }} &rarr; {{ h.riesgo_nuevo }}
+                <td style="white-space: nowrap;">
+                    {% if h.riesgo_anterior == -1 %}Sin Contacto{% elif h.riesgo_anterior == 0 %}Sin Riesgo{% elif h.riesgo_anterior == 1 %}Bajo{% elif h.riesgo_anterior == 2 %}Medio{% elif h.riesgo_anterior >= 3 %}Alto{% else %}—{% endif %} &rarr; {% if h.riesgo_nuevo == -1 %}Sin Contacto{% elif h.riesgo_nuevo == 0 %}Sin Riesgo{% elif h.riesgo_nuevo == 1 %}Bajo{% elif h.riesgo_nuevo == 2 %}Medio{% elif h.riesgo_nuevo >= 3 %}Alto{% else %}—{% endif %}
                 </td>
                 <td>
                     {% if h.origen_cambio == 'ML' %}
-                        <span style="background-color: #172b4d; color: white; padding: 2px 6px; border-radius: 10px; font-size: 9px; font-weight: bold;">IA</span>
+                        <span style="color: #172b4d; font-weight: bold; font-size: 10px; text-transform: uppercase;">Modelo</span>
                     {% else %}
-                        <span style="background-color: #11cdef; color: white; padding: 2px 6px; border-radius: 10px; font-size: 9px; font-weight: bold;">Manual</span>
+                        <span style="color: #11cdef; font-weight: bold; font-size: 10px; text-transform: uppercase;">Manual</span>
                     {% endif %}
                 </td>
             </tr>

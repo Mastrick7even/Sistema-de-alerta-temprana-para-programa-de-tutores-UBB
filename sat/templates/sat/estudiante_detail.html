@@ -58,8 +58,8 @@ Perfil de {{ estudiante.nombre }}
                         <form method="post" action="{% url 'recalcular-riesgo-estudiante' estudiante.pk %}">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-sm btn-default"
-                                title="Recalcula el nivel de riesgo IA con las últimas observaciones">
-                                <i class="fas fa-sync-alt mr-1"></i> Recalcular Riesgo IA
+                                title="Recalcula el nivel de riesgo con las últimas observaciones">
+                                <i class="fas fa-sync-alt mr-1"></i> Recalcular Riesgo
                             </button>
                         </form>
                     </div>
@@ -69,9 +69,9 @@ Perfil de {{ estudiante.nombre }}
                     <div class="alert alert-warning alert-dismissible fade show mt-3 mb-0 py-2 px-3 text-left" role="alert"
                         style="font-size:0.82rem; border-radius:8px;">
                         <i class="fas fa-clock mr-1"></i>
-                        <strong>Predicción IA pendiente de validación.</strong>
+                        <strong>Riesgo pendiente de validación.</strong>
                         {% if es_encargado or user.is_superuser %}
-                        Confirma la predicción o usa el panel de corrección.
+                        Confirma el nivel de riesgo asignado por el modelo o usa el panel de corrección.
                         
                         <div class="mt-2 mb-2 p-2 bg-white rounded border border-light text-muted d-inline-block shadow-sm">
                             <small class="font-weight-bold">Antes:</small> 
@@ -85,7 +85,7 @@ Perfil de {{ estudiante.nombre }}
                                 {% endif %}
                             </span> 
                             <i class="fas fa-arrow-right mx-2"></i>
-                            <small class="font-weight-bold text-dark">Nueva Predicción IA:</small> 
+                            <small class="font-weight-bold text-dark">Nuevo nivel de riesgo:</small> 
                             <span class="badge badge-info text-dark">
                                 {% if estudiante.nivel_riesgo_ia == -1 %}Sin Contacto
                                 {% elif estudiante.nivel_riesgo_ia == 0 %}Sin Riesgo
@@ -101,7 +101,7 @@ Perfil de {{ estudiante.nombre }}
                                 <i class="fas fa-check mr-1"></i> Confirmar
                             </button>
                             <button type="button" class="btn btn-danger btn-sm" data-toggle="modal" data-target="#modal-rechazar-prediccion"
-                                    title="Restaura el nivel de riesgo que tenía antes de esta predicción">
+                                    title="Restaura el nivel de riesgo anterior">
                                 <i class="fas fa-times mr-1"></i> Rechazar
                             </button>
                         </div>
@@ -115,7 +115,7 @@ Perfil de {{ estudiante.nombre }}
                                 <button type="button" class="close text-white" data-dismiss="modal"><span aria-hidden="true">&times;</span></button>
                               </div>
                               <div class="modal-body text-center py-4 text-wrap text-dark" style="white-space: normal;">
-                                <p class="mb-0">¿Estás seguro de <strong>confirmar</strong> la predicción de la IA?</p>
+                                <p class="mb-0">¿Estás seguro de <strong>confirmar</strong> el nivel de riesgo asignado por el modelo?</p>
                               </div>
                               <div class="modal-footer py-2 justify-content-center">
                                 <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Cancelar</button>
@@ -137,7 +137,7 @@ Perfil de {{ estudiante.nombre }}
                                 <button type="button" class="close text-white" data-dismiss="modal"><span aria-hidden="true">&times;</span></button>
                               </div>
                               <div class="modal-body text-center py-4 text-wrap text-dark" style="white-space: normal;">
-                                <p class="mb-0">¿Estás seguro de <strong>rechazar</strong> esta predicción? El nivel de riesgo volverá al estado anterior.</p>
+                                <p class="mb-0">¿Estás seguro de <strong>rechazar</strong> este nivel de riesgo? El nivel de riesgo anterior se mantendrá.</p>
                               </div>
                               <div class="modal-footer py-2 justify-content-center">
                                 <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Cancelar</button>
@@ -182,7 +182,7 @@ Perfil de {{ estudiante.nombre }}
                         <hr class="my-4" />
 
                         <h3>Estado Actual</h3>
-                        {# Siempre se muestra la predicción IA más reciente #}
+                        {# Siempre se muestra el riesgo más reciente #}
                         <span class="badge badge-pill badge-lg
                             {% if estudiante.nivel_riesgo_ia == 3 or estudiante.nivel_riesgo_ia == 4 %}badge-danger
                             {% elif estudiante.nivel_riesgo_ia == 2 %}badge-warning
@@ -209,7 +209,7 @@ Perfil de {{ estudiante.nombre }}
                         </div>
                         {% else %}
                         <div class="mt-2">
-                            <small class="text-muted"><i class="fas fa-robot mr-1"></i>Predicción automática IA</small>
+                            <small class="text-muted"><i class="fas fa-robot mr-1"></i>Nivel de riesgo asignado por Modelo</small>
                         </div>
                         {% endif %}
 
@@ -228,7 +228,7 @@ Perfil de {{ estudiante.nombre }}
                 <div class="card-body">
                     <p class="text-sm text-muted mb-3">
                         Tu corrección se guarda como <strong>retroalimentación para el modelo</strong>.
-                        La IA seguirá recalculando en el batch nocturno, pero se registra tu criterio.
+                        El modelo seguirá recalculando en el batch nocturno, pero se registra tu criterio.
                     </p>
                     <form method="post" action="{% url 'sobrescribir-riesgo' estudiante.pk %}">
                         {% csrf_token %}
@@ -433,16 +433,18 @@ Perfil de {{ estudiante.nombre }}
                                         {% endif %}
                                     </td>
                                     <td class="text-sm">
-                                        <span class="badge badge-secondary">{{ h.riesgo_anterior }}</span>
+                                        <span class="badge badge-secondary">
+                                            {% if h.riesgo_anterior == -1 %}Sin Contacto{% elif h.riesgo_anterior == 0 %}Sin Riesgo{% elif h.riesgo_anterior == 1 %}Bajo{% elif h.riesgo_anterior == 2 %}Medio{% elif h.riesgo_anterior >= 3 %}Alto{% else %}—{% endif %}
+                                        </span>
                                         <i class="fas fa-arrow-right text-muted mx-1" style="font-size:0.6rem"></i>
                                         <span class="badge {% if h.riesgo_nuevo >= 3 %}badge-danger{% elif h.riesgo_nuevo == 2 %}badge-warning{% elif h.riesgo_nuevo == 1 %}badge-info{% else %}badge-success{% endif %}">
-                                            {{ h.riesgo_nuevo }}
+                                            {% if h.riesgo_nuevo == -1 %}Sin Contacto{% elif h.riesgo_nuevo == 0 %}Sin Riesgo{% elif h.riesgo_nuevo == 1 %}Bajo{% elif h.riesgo_nuevo == 2 %}Medio{% elif h.riesgo_nuevo >= 3 %}Alto{% else %}—{% endif %}
                                         </span>
                                     </td>
                                     <td class="text-sm">
                                         {% if h.origen_cambio == 'ML' %}
                                             <span class="badge badge-pill badge-default">
-                                                <i class="fas fa-robot mr-1"></i>IA
+                                                <i class="fas fa-robot mr-1"></i>Modelo
                                             </span>
                                         {% else %}
                                             <span class="badge badge-pill badge-info">

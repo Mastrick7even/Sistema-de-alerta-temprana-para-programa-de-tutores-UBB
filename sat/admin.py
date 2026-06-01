@@ -6,7 +6,7 @@ from .models import (
     Usuario, Rol, Carrera, Estudiante,
     Estado, TipoDesercion, HistorialEstado,
     Tutoria, TipoTutoria, ClasificacionTutoria, Asistencia,
-    Bitacora, Alarma, TipoAlarma, Notificacion, HistorialRiesgo
+    Bitacora, ComentarioBitacora, Alarma, TipoAlarma, Notificacion, HistorialRiesgo
 )
 
 # Registro básico de modelos
@@ -26,6 +26,7 @@ admin.site.register(HistorialEstado)
 admin.site.register(Tutoria)
 admin.site.register(Asistencia)
 admin.site.register(Bitacora)
+admin.site.register(ComentarioBitacora)
 admin.site.register(Alarma)
 admin.site.register(Notificacion)
 admin.site.register(HistorialRiesgo)

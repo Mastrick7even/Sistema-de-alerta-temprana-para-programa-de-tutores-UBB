@@ -54,6 +54,7 @@ Perfil de {{ estudiante.nombre }}
                 </div>
 
                 <div class="card-header text-center border-0 pt-8 pt-md-4 pb-0 pb-md-4">
+                    {% if es_encargado or user.is_superuser %}
                     <div class="d-flex justify-content-center">
                         <form method="post" action="{% url 'recalcular-riesgo-estudiante' estudiante.pk %}">
                             {% csrf_token %}
@@ -63,6 +64,10 @@ Perfil de {{ estudiante.nombre }}
                             </button>
                         </form>
                     </div>
+                    {% else %}
+                    <!-- Espaciador fantasma para mantener la foto de perfil en su lugar -->
+                    <div class="mt-4 pt-3"></div>
+                    {% endif %}
 
                     {# ── Banner de validación pendiente ── #}
                     {% if estudiante.riesgo_pendiente_validacion %}
@@ -181,7 +186,7 @@ Perfil de {{ estudiante.nombre }}
 
                         <hr class="my-4" />
 
-                        <h3>Estado Actual</h3>
+                        <h3>Nivel de riesgo actual</h3>
                         {# Siempre se muestra el riesgo más reciente #}
                         <span class="badge badge-pill badge-lg
                             {% if estudiante.nivel_riesgo_ia == 3 or estudiante.nivel_riesgo_ia == 4 %}badge-danger
@@ -201,7 +206,7 @@ Perfil de {{ estudiante.nombre }}
                         {% if estudiante.riesgo_sobrescrito %}
                         <div class="mt-2">
                             <span class="badge badge-pill badge-light border text-muted" style="font-size:0.65rem">
-                                <i class="fas fa-tag mr-1"></i>Etiqueta EC guardada: nivel {{ estudiante.nivel_riesgo_manual }}
+                                <i class="fas fa-tag mr-1"></i>Etiqueta EC guardada
                             </span>
                             {% if estudiante.observacion_sobrescritura %}
                             <small class="d-block text-muted font-italic mt-1" style="font-size:0.7rem">"{{ estudiante.observacion_sobrescritura }}"</small>
@@ -235,17 +240,17 @@ Perfil de {{ estudiante.nombre }}
                         <div class="form-group">
                             <label class="form-control-label">Nivel de riesgo correcto</label>
                             <select name="riesgo_manual" class="form-control form-control-sm" required>
-                                <option value="">-- Seleccionar --</option>
-                                <option value="0" {% if estudiante.nivel_riesgo_manual == 0 %}selected{% endif %}>0 - Sin Riesgo</option>
-                                <option value="1" {% if estudiante.nivel_riesgo_manual == 1 %}selected{% endif %}>1 - Bajo</option>
-                                <option value="2" {% if estudiante.nivel_riesgo_manual == 2 %}selected{% endif %}>2 - Medio</option>
-                                <option value="3" {% if estudiante.nivel_riesgo_manual == 3 %}selected{% endif %}>3 - Alto</option>
+                                <option value="" selected>-- Seleccionar --</option>
+                                <option value="0">Sin Riesgo</option>
+                                <option value="1">Bajo</option>
+                                <option value="2">Medio</option>
+                                <option value="3">Alto</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label class="form-control-label">Justificación <small class="text-muted">(opcional)</small></label>
                             <textarea name="observacion_sobrescritura" class="form-control form-control-sm" rows="2"
-                                placeholder="Ej: Estudiante en proceso de recuperación académica confirmada...">{{ estudiante.observacion_sobrescritura|default:'' }}</textarea>
+                                placeholder="Ej: Estudiante en proceso de recuperación académica confirmada..."></textarea>
                         </div>
                         <button type="submit" class="btn btn-primary btn-sm btn-block">
                             <i class="fas fa-save mr-1"></i> Guardar corrección
@@ -368,6 +373,97 @@ Perfil de {{ estudiante.nombre }}
                                         </span>
                                     </div>
                                     {% endif %}
+                                    
+                                    {% if bitacora.comentarios.all %}
+                                    <hr class="my-3" />
+                                    <h6 class="text-uppercase text-muted ls-1 mb-2" style="font-size: 0.7rem;">Seguimiento y Sub-observaciones</h6>
+                                    {% for comentario in bitacora.comentarios.all %}
+                                    <div class="bg-secondary p-3 rounded mb-2 border">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <small class="font-weight-bold text-dark"><i class="fas fa-user-circle mr-1"></i>{{ comentario.autor|default:"Sistema" }}</small>
+                                            <div>
+                                                <small class="text-muted mr-2">{{ comentario.fecha_creacion|date:"d M Y, H:i" }}</small>
+                                                {% if request.user.email == comentario.autor.email or request.user.is_superuser %}
+                                                <button class="btn btn-sm btn-link text-primary p-0 m-0" type="button" data-toggle="collapse" data-target="#collapseEditComentario{{ comentario.pk }}" title="Editar">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-link text-danger p-0 m-0 ml-1" title="Eliminar" 
+                                                        data-toggle="modal" data-target="#modal-notification" 
+                                                        data-url="{% url 'eliminar-comentario-bitacora' comentario.pk %}" 
+                                                        onclick="setDeleteUrl(this.getAttribute('data-url'))">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        <p class="mb-0 text-sm text-dark">{{ comentario.texto|linebreaksbr }}</p>
+                                        
+                                        <div id="collapseEditComentario{{ comentario.pk }}" class="collapse mt-2">
+                                            <form method="post" action="{% url 'editar-comentario-bitacora' comentario.pk %}">
+                                                {% csrf_token %}
+                                                <div class="form-group mb-2">
+                                                    <textarea name="texto" class="form-control form-control-sm" rows="2" required>{{ comentario.texto }}</textarea>
+                                                </div>
+                                                <button type="submit" class="btn btn-sm btn-primary">Guardar Edición</button>
+                                                <button type="button" class="btn btn-sm btn-link text-muted" data-toggle="collapse" data-target="#collapseEditComentario{{ comentario.pk }}">Cancelar</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                    {% endif %}
+                                    
+                                    <div class="d-flex justify-content-between align-items-end mt-3">
+                                        <div class="w-100 mr-3">
+                                            <button class="btn btn-sm btn-outline-primary mb-2" type="button" data-toggle="collapse" data-target="#collapseComentario{{ bitacora.pk }}">
+                                                <i class="fas fa-reply mr-1"></i> Agregar Actualización
+                                            </button>
+                                            <div class="collapse mt-2" id="collapseComentario{{ bitacora.pk }}">
+                                                <div class="card card-body bg-secondary border-0 shadow-none mb-0">
+                                                    <form method="post" action="{% url 'agregar-comentario-bitacora' bitacora.pk %}">
+                                                        {% csrf_token %}
+                                                        <div class="form-group mb-2">
+                                                            <textarea name="texto" class="form-control form-control-sm" rows="2" placeholder="Describe el avance o nueva información..." required></textarea>
+                                                        </div>
+                                                        <div class="form-group mb-3 row align-items-center">
+                                                            <div class="col-auto">
+                                                                <label class="text-sm font-weight-bold mb-0">Estado de Atención:</label>
+                                                            </div>
+                                                            <div class="col-auto">
+                                                                <select name="estado_atencion" class="form-control form-control-sm shadow-sm">
+                                                                    <option value="3" {% if bitacora.estado_atencion == 3 %}selected{% endif %}>🔴 Reportada / No Atendida</option>
+                                                                    <option value="2" {% if bitacora.estado_atencion == 2 %}selected{% endif %}>🟡 En Proceso / Siendo Atendida</option>
+                                                                    <option value="1" {% if bitacora.estado_atencion == 1 %}selected{% endif %}>🟢 Resuelta / Cerrada</option>
+                                                                </select>
+                                                            </div>
+                                                        </div>
+                                                        <button type="submit" class="btn btn-sm btn-primary">Guardar Actualización</button>
+                                                        <button type="button" class="btn btn-sm btn-link text-muted" data-toggle="collapse" data-target="#collapseComentario{{ bitacora.pk }}">Cancelar</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm dropdown-toggle badge badge-pill text-white mb-2 shadow-sm
+                                                {% if bitacora.estado_atencion == 3 %}bg-danger
+                                                {% elif bitacora.estado_atencion == 2 %}bg-warning text-dark
+                                                {% else %}bg-success{% endif %}" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="font-size: 0.75rem;">
+                                                {% if bitacora.estado_atencion == 3 %}🔴 REPORTADA
+                                                {% elif bitacora.estado_atencion == 2 %}🟡 EN PROCESO
+                                                {% else %}🟢 RESUELTA{% endif %}
+                                            </button>
+                                            <div class="dropdown-menu dropdown-menu-right shadow">
+                                                <form method="post" action="{% url 'agregar-comentario-bitacora' bitacora.pk %}">
+                                                    {% csrf_token %}
+                                                    <!-- Se envía un texto vacío (el backend está preparado para tolerar texto vacío y cambiar solo estado) -->
+                                                    <input type="hidden" name="texto" value=""> 
+                                                    <button class="dropdown-item text-sm font-weight-bold text-danger" type="submit" name="estado_atencion" value="3">🔴 Reportada / No Atendida</button>
+                                                    <button class="dropdown-item text-sm font-weight-bold text-warning" type="submit" name="estado_atencion" value="2">🟡 En Proceso / Siendo Atendida</button>
+                                                    <button class="dropdown-item text-sm font-weight-bold text-success" type="submit" name="estado_atencion" value="1">🟢 Resuelta / Cerrada</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
                             </div>

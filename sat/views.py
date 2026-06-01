@@ -224,6 +224,57 @@ class BitacoraUpdateView(LoginRequiredMixin, UpdateView):
         # Al guardar, volvemos al perfil del estudiante
         return reverse_lazy('estudiante-detail', kwargs={'pk': self.object.estudiante.pk})
 
+# === VISTA PARA AGREGAR COMENTARIO Y ACTUALIZAR ESTADO ===
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib import messages
+
+def agregar_comentario_bitacora(request, pk):
+    if request.method == 'POST':
+        bitacora = get_object_or_404(Bitacora, pk=pk)
+        texto = request.POST.get('texto', '').strip()
+        nuevo_estado = request.POST.get('estado_atencion')
+        
+        if texto:
+            from .models import ComentarioBitacora, Usuario
+            usuario = None
+            try:
+                usuario = Usuario.objects.get(email=request.user.email)
+            except Usuario.DoesNotExist:
+                pass
+            ComentarioBitacora.objects.create(
+                bitacora=bitacora,
+                texto=texto,
+                autor=usuario
+            )
+        
+        if nuevo_estado and int(nuevo_estado) != bitacora.estado_atencion:
+            bitacora.estado_atencion = int(nuevo_estado)
+            bitacora.save()
+            
+        messages.success(request, 'Actualización de bitácora guardada correctamente.')
+        return redirect('estudiante-detail', pk=bitacora.estudiante.pk)
+    return redirect('dashboard')
+
+def editar_comentario_bitacora(request, pk):
+    from .models import ComentarioBitacora
+    comentario = get_object_or_404(ComentarioBitacora, pk=pk)
+    if request.method == 'POST':
+        texto = request.POST.get('texto', '').strip()
+        if texto:
+            comentario.texto = texto
+            comentario.save()
+            messages.success(request, 'Actualización editada correctamente.')
+    return redirect('estudiante-detail', pk=comentario.bitacora.estudiante.pk)
+
+def eliminar_comentario_bitacora(request, pk):
+    from .models import ComentarioBitacora
+    comentario = get_object_or_404(ComentarioBitacora, pk=pk)
+    estudiante_pk = comentario.bitacora.estudiante.pk
+    if request.method == 'POST':
+        comentario.delete()
+        messages.success(request, 'Actualización eliminada correctamente.')
+    return redirect('estudiante-detail', pk=estudiante_pk)
+
 # === VISTA PARA BORRAR ===
 class BitacoraDeleteView(LoginRequiredMixin, DeleteView):
     model = Bitacora
@@ -295,7 +346,10 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         riesgo_ghosting = mis_estudiantes.filter(nivel_riesgo_ia=-1).count()
 
         # Estudiantes pendientes de validación IA (para el nuevo panel)
-        context['pendientes_validacion'] = mis_estudiantes.filter(riesgo_pendiente_validacion=True).order_by('-id_estudiante')
+        if es_encargado or django_user.is_superuser:
+            context['pendientes_validacion'] = mis_estudiantes.filter(riesgo_pendiente_validacion=True).order_by('-id_estudiante')
+        else:
+            context['pendientes_validacion'] = None
 
         # 3. Bitácoras recientes (de MIS estudiantes)
 
@@ -1196,7 +1250,7 @@ def rechazar_prediccion_ia(request, pk):
         estudiante.nivel_riesgo_manual = riesgo_anterior
         estudiante.riesgo_sobrescrito = True
         estudiante.riesgo_pendiente_validacion = False
-        estudiante.observacion_sobrescritura = "Predicción IA rechazada por EC. Se restauró el nivel previo."
+        estudiante.observacion_sobrescritura = "Predicción rechazada por EC. Se restauró el nivel previo."
         estudiante.riesgo_corregido_por = perfil if perfil else None
         estudiante.riesgo_corregido_fecha = timezone.now()
         

@@ -75,9 +75,9 @@ class Bitacora(models.Model):
         related_name='bitacoras_creadas'
     )
 
-    # 1. Para saber si es Rojo(3), Amarillo(2) o Verde(1)
-    NIVEL_RIESGO_CHOICES = [(1, 'Bajo'), (2, 'Medio'), (3, 'Alto')]
-    nivel_riesgo = models.IntegerField(choices=NIVEL_RIESGO_CHOICES, default=1)
+    # 1. Estado de Atención de la observación (Reemplaza al antiguo Nivel de Riesgo)
+    ESTADO_ATENCION_CHOICES = [(1, 'Resuelta / Cerrada'), (2, 'En Proceso / Siendo Atendida'), (3, 'Reportada / No Atendida')]
+    estado_atencion = models.IntegerField(choices=ESTADO_ATENCION_CHOICES, default=3)
 
     # 2. Para saber de dónde vino este dato (ej: "Carga Masiva 2022 - Alerta 1")
     # Esto reemplaza tu necesidad de normalizar las alarmas antiguas.
@@ -90,28 +90,9 @@ class Bitacora(models.Model):
         db_table = 'bitacora'
     
     def save(self, *args, **kwargs):
-        if not self.id_bitacora:
-            texto_analisis = ""
-            if self.observacion: texto_analisis += self.observacion.lower() + " "
-            if self.alarma:
-                if getattr(self.alarma, 'tipo_alarma', None):
-                    texto_analisis += self.alarma.tipo_alarma.nombre.lower() + " "
-                if self.alarma.descripcion:
-                    texto_analisis += self.alarma.descripcion.lower()
-            
-            # Limpiador de tildes vital para la heurística
-            texto_analisis = texto_analisis.replace('á', 'a').replace('é', 'e').replace('í', 'i').replace('ó', 'o').replace('ú', 'u')
-            
-            # Diccionarios sin tildes
-            palabras_rojas = ['inasistencia', 'desercion', 'desertar', 'grave', 'psicologico', 'depresion', 'renuncia', 'retiro', 'acoso', 'urgente']
-            palabras_amarillas = ['modular', 'rendimiento', 'reprobacion', 'reprobado', 'atraso', 'dificultad', 'problema', 'familiar', 'economico']
-            
-            if self.nivel_riesgo == 1:
-                if any(palabra in texto_analisis for palabra in palabras_rojas):
-                    self.nivel_riesgo = 3  
-                elif any(palabra in texto_analisis for palabra in palabras_amarillas):
-                    self.nivel_riesgo = 2  
-
+        # La IA y el clustering ahora dependen puramente del TF-IDF de los textos 
+        # y del estado de atención asignado manualmente por el tutor, 
+        # por ende se eliminó la heurística hardcodeada de palabras clave.
         super().save(*args, **kwargs)
 
 
@@ -483,3 +464,17 @@ class Notificacion(models.Model):
 
     def __str__(self):
         return f"Para {self.destinatario}: {self.mensaje}"
+
+class ComentarioBitacora(models.Model):
+    id_comentario = models.AutoField(primary_key=True)
+    bitacora = models.ForeignKey('Bitacora', on_delete=models.CASCADE, related_name='comentarios')
+    texto = models.TextField()
+    autor = models.ForeignKey('Usuario', on_delete=models.SET_NULL, null=True)
+    fecha_creacion = models.DateTimeField(default=timezone.now)
+    
+    class Meta:
+        db_table = 'comentario_bitacora'
+        ordering = ['fecha_creacion']
+
+    def __str__(self):
+        return f"Comentario de {self.autor} en bitácora {self.bitacora_id}"

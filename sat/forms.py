@@ -1,7 +1,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 from .models import (
-    Bitacora, Tutoria, Asistencia, Usuario, Carrera, Rol,
+    Bitacora, ComentarioBitacora, Tutoria, Asistencia, Usuario, Carrera, Rol,
     TipoAlarma, TipoTutoria, ClasificacionTutoria, TipoDesercion, Estado
 )
 
@@ -116,13 +116,16 @@ class BitacoraForm(forms.ModelForm):
         # Solo pedimos estos dos campos.
         # El estudiante y la fecha se ponen automáticamente en el backend. (agregar fecha en el save() del view)
 
-        fields = ['fecha_registro', 'observacion', 'alarma']
+        fields = ['fecha_registro', 'estado_atencion', 'observacion', 'alarma']
         
         # Aquí le ponemos "maquillaje" (clases de Bootstrap) para que se vea bonito
         widgets = {
-            'fecha_registro': forms.DateInput(attrs={
+            'fecha_registro': forms.DateInput(format='%Y-%m-%d', attrs={
                 'class': 'form-control',
                 'type': 'date',
+            }),
+            'estado_atencion': forms.Select(attrs={
+                'class': 'form-control'
             }),
             'observacion': forms.Textarea(attrs={
                 'class': 'form-control', 
@@ -135,8 +138,24 @@ class BitacoraForm(forms.ModelForm):
         }
         labels = {
             'fecha_registro': 'Fecha de la Observación',
+            'estado_atencion': 'Estado de Atención',
             'observacion': 'Detalle de la Observación',
             'alarma': 'Tipo de Alarma (si aplica)',
+        }
+
+class ComentarioBitacoraForm(forms.ModelForm):
+    class Meta:
+        model = ComentarioBitacora
+        fields = ['texto']
+        widgets = {
+            'texto': forms.Textarea(attrs={
+                'class': 'form-control', 
+                'rows': 2, 
+                'placeholder': 'Agregar actualización o sub-observación...'
+            }),
+        }
+        labels = {
+            'texto': '',
         }
     
     def __init__(self, *args, **kwargs):

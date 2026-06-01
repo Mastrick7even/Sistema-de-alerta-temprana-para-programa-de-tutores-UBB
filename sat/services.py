@@ -36,7 +36,7 @@ class PredictorRiesgo:
         if not self.cerebro: 
             return 0 
         
-        bitacoras = estudiante_obj.bitacora_set.all() 
+        bitacoras = estudiante_obj.bitacora_set.prefetch_related('comentarios').all()
         
         # EL GHOSTING: Si no hay bitácoras, es un fantasma. Riesgo -1 (Alerta de Inactividad)
         if not bitacoras.exists():
@@ -47,9 +47,11 @@ class PredictorRiesgo:
         textos = []
 
         for b in bitacoras:
-            if b.nivel_riesgo == 3: cant_rojos += 1
-            elif b.nivel_riesgo == 2: cant_amarillos += 1
+            if b.estado_atencion == 3: cant_rojos += 1
+            elif b.estado_atencion == 2: cant_amarillos += 1
             if b.observacion: textos.append(b.observacion)
+            for comentario in b.comentarios.all():
+                if comentario.texto: textos.append(comentario.texto)
         
         obs_limpia = self.limpiar_texto(" ".join(textos))
 
@@ -63,16 +65,16 @@ class PredictorRiesgo:
         try:
             # 1. Escalar numéricos (EL ORDEN EXACTO EXIGIDO POR LA IA)
             X_colores_df = pd.DataFrame(
-                [[riesgo_score, rojos_input, amarillos_input]], 
-                columns=['riesgo_score', 'rojos_topados', 'amarillos_topados']
+                [[rojos_input, amarillos_input]], 
+                columns=['rojos_topados', 'amarillos_topados']
             )
             X_colores = self.cerebro['scaler'].transform(X_colores_df)
             
             # 2. Vectorizar texto
             X_texto = self.cerebro['tfidf'].transform([obs_limpia]).toarray()
 
-            # 3. Concatenar (Asegúrate de usar los pesos correctos de tu entrenamiento)
-            X_final = np.concatenate([X_colores * 2.5, X_texto * 0.5], axis=1)
+            # 3. Concatenar (Debe ser idéntico al entrenamiento: colores x 1.0, texto x 1.5)
+            X_final = np.concatenate([X_colores, X_texto * 1.5], axis=1)
 
             # 4. Predecir
             cluster_id = self.cerebro['model'].predict(X_final)[0]

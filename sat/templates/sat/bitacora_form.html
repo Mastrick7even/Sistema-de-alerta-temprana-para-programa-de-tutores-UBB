@@ -43,6 +43,16 @@
               <div class="text-danger small mt-1">{{ form.fecha_registro.errors }}</div>
               {% endif %}
             </div>
+            
+            <div class="form-group">
+              <label class="form-control-label" for="{{ form.estado_atencion.id_for_label }}">
+                {{ form.estado_atencion.label }}
+              </label>
+              {{ form.estado_atencion }}
+              {% if form.estado_atencion.errors %}
+              <div class="text-danger small mt-1">{{ form.estado_atencion.errors }}</div>
+              {% endif %}
+            </div>
             <div class="form-group">
               <label class="form-control-label" for="{{ form.observacion.id_for_label }}">
                 {{ form.observacion.label }}

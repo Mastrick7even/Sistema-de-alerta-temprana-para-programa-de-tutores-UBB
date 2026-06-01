@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
-    EstudianteListView, EstudianteDetailView, BitacoraCreateView, BitacoraUpdateView, BitacoraDeleteView,
+    EstudianteListView, EstudianteDetailView, BitacoraCreateView, BitacoraUpdateView, BitacoraDeleteView, agregar_comentario_bitacora,
+    editar_comentario_bitacora, eliminar_comentario_bitacora,
     DashboardView, ReporteEstudiantePDF, MisTutoriasView, tomar_asistencia, TutoriaCreateView, TutoriaUpdateView, TutoriaDeleteView,
     leer_notificacion, todas_notificaciones, marcar_notificaciones_leidas, eliminar_notificaciones, ReporteAsistenciaView,
     DetalleAsistenciaEstudianteView, sobrescribir_riesgo, eliminar_historial_riesgo,
@@ -23,6 +24,9 @@ urlpatterns = [
     path('estudiantes/<int:pk>/bitacora/nueva/', BitacoraCreateView.as_view(), name='bitacora-create'),
     path('bitacora/<int:pk>/editar/', BitacoraUpdateView.as_view(), name='bitacora-update'),
     path('bitacora/<int:pk>/borrar/', BitacoraDeleteView.as_view(), name='bitacora-delete'),
+    path('bitacora/<int:pk>/comentario/nuevo/', agregar_comentario_bitacora, name='agregar-comentario-bitacora'),
+    path('comentario/<int:pk>/editar/', editar_comentario_bitacora, name='editar-comentario-bitacora'),
+    path('comentario/<int:pk>/eliminar/', eliminar_comentario_bitacora, name='eliminar-comentario-bitacora'),
     path('estudiante/<int:pk>/pdf/', ReporteEstudiantePDF.as_view(), name='estudiante-pdf'),
     path('tutorias/', MisTutoriasView.as_view(), name='mis-tutorias'),
     path('tutorias/nueva/', TutoriaCreateView.as_view(), name='crear-tutoria'),

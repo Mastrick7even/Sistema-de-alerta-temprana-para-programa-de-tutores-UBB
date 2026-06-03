@@ -133,24 +133,38 @@ Perfil de {{ estudiante.nombre }}
                           </div>
                         </div>
 
-                        <!-- Modal Rechazar -->
+                        <!-- Modal Rechazar / Corregir -->
                         <div class="modal fade" id="modal-rechazar-prediccion" tabindex="-1" role="dialog" aria-hidden="true">
-                          <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
+                          <div class="modal-dialog modal-dialog-centered" role="document">
                             <div class="modal-content">
                               <div class="modal-header bg-gradient-danger py-3">
-                                <h5 class="modal-title text-white"><i class="fas fa-times-circle mr-2"></i>Rechazar</h5>
+                                <h5 class="modal-title text-white"><i class="fas fa-times-circle mr-2"></i>Rechazar y Corregir Riesgo</h5>
                                 <button type="button" class="close text-white" data-dismiss="modal"><span aria-hidden="true">&times;</span></button>
                               </div>
-                              <div class="modal-body text-center py-4 text-wrap text-dark" style="white-space: normal;">
-                                <p class="mb-0">¿Estás seguro de <strong>rechazar</strong> este nivel de riesgo? El nivel de riesgo anterior se mantendrá.</p>
-                              </div>
-                              <div class="modal-footer py-2 justify-content-center">
-                                <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Cancelar</button>
-                                <form method="post" action="{% url 'rechazar-prediccion-ia' estudiante.pk %}" class="d-inline">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-sm btn-danger">Sí, rechazar</button>
-                                </form>
-                              </div>
+                              <form method="post" action="{% url 'sobrescribir-riesgo' estudiante.pk %}">
+                                  {% csrf_token %}
+                                  <div class="modal-body py-4 text-dark">
+                                    <p class="mb-3">La predicción será rechazada. Por favor, selecciona el nivel de riesgo correcto y añade una justificación.</p>
+                                    <div class="form-group mb-2">
+                                        <label class="form-control-label">Nivel de riesgo correcto</label>
+                                        <select name="riesgo_manual" class="form-control form-control-sm" required>
+                                            <option value="" selected>-- Seleccionar --</option>
+                                            <option value="0">Sin Riesgo</option>
+                                            <option value="1">Bajo</option>
+                                            <option value="2">Medio</option>
+                                            <option value="3">Alto</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group mb-0">
+                                        <label class="form-control-label">Justificación <small class="text-muted">(opcional)</small></label>
+                                        <textarea name="observacion_sobrescritura" class="form-control form-control-sm" rows="3" placeholder="Ej: Estudiante en proceso de recuperación académica confirmada..."></textarea>
+                                    </div>
+                                  </div>
+                                  <div class="modal-footer py-2 justify-content-center">
+                                    <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Cancelar</button>
+                                    <button type="submit" class="btn btn-sm btn-danger"><i class="fas fa-save mr-1"></i> Guardar corrección</button>
+                                  </div>
+                              </form>
                             </div>
                           </div>
                         </div>

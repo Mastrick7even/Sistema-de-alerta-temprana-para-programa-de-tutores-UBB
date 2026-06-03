@@ -62,17 +62,40 @@ def registrar_historial_riesgo(sender, instance, **kwargs):
     except Estudiante.DoesNotExist:
         return
 
-    # ── Detectar cambio en nivel_riesgo_ia ─────────────────────────────────
-    if instance.nivel_riesgo_ia != estudiante_anterior.nivel_riesgo_ia:
-        # Determinar origen: si riesgo_sobrescrito=True en el nuevo → fue el EC
-        origen = 'HU' if (instance.riesgo_sobrescrito and not estudiante_anterior.riesgo_sobrescrito) else 'ML'
-        HistorialRiesgo.objects.create(
-            estudiante=instance,
-            riesgo_anterior=estudiante_anterior.nivel_riesgo_ia,
-            riesgo_nuevo=instance.nivel_riesgo_ia,
-            origen_cambio=origen,
-            usuario=instance.riesgo_corregido_por if origen == 'HU' else None
-        )
+    es_correccion_pendiente = estudiante_anterior.riesgo_pendiente_validacion and instance.riesgo_sobrescrito
+
+    # ── Detectar cambio en nivel_riesgo_ia o corrección de predicción pendiente ──
+    if instance.nivel_riesgo_ia != estudiante_anterior.nivel_riesgo_ia or es_correccion_pendiente:
+        if es_correccion_pendiente:
+            # EC está corrigiendo/rechazando una predicción pendiente.
+            # Modificamos el último historial ML para que refleje la corrección manual.
+            ultimo_historial = HistorialRiesgo.objects.filter(
+                estudiante=instance, origen_cambio='ML'
+            ).order_by('-fecha_cambio').first()
+            
+            if ultimo_historial:
+                ultimo_historial.riesgo_nuevo = instance.nivel_riesgo_ia
+                ultimo_historial.origen_cambio = 'HU'
+                ultimo_historial.usuario = instance.riesgo_corregido_por
+                ultimo_historial.save()
+            else:
+                HistorialRiesgo.objects.create(
+                    estudiante=instance,
+                    riesgo_anterior=estudiante_anterior.nivel_riesgo_ia,
+                    riesgo_nuevo=instance.nivel_riesgo_ia,
+                    origen_cambio='HU',
+                    usuario=instance.riesgo_corregido_por
+                )
+        else:
+            # Flujo normal de cambio de riesgo
+            origen = 'HU' if instance.riesgo_sobrescrito else 'ML'
+            HistorialRiesgo.objects.create(
+                estudiante=instance,
+                riesgo_anterior=estudiante_anterior.nivel_riesgo_ia,
+                riesgo_nuevo=instance.nivel_riesgo_ia,
+                origen_cambio=origen,
+                usuario=instance.riesgo_corregido_por if origen == 'HU' else None
+            )
 
     # ── Detectar cambio en nivel_riesgo_manual (etiqueta de reentrenamiento) ─
     manual_anterior = estudiante_anterior.nivel_riesgo_manual
@@ -106,7 +129,7 @@ def notificar_prediccion_pendiente(sender, instance, **kwargs):
 
     mensaje = (
         f"🤖 Validación pendiente: {instance.nombre} {instance.apellido} "
-        f"— IA predijo nivel \"{nivel_nombre}\". Confirmar o corregir."
+        f"— Modelo lo agrupó en nivel \"{nivel_nombre}\". Confirmar o corregir."
     )
 
     # Notificar a Encargados de Carrera y también a Superusuarios

@@ -1,20 +1,13 @@
 {% extends 'layouts/base.html' %}
+{% block page_title %}{{ tutor.nombre }} {{ tutor.apellido }}{% endblock %}
 {% block content %}
 <div class="header bg-primary pb-6">
   <div class="container-fluid">
     <div class="header-body">
       <div class="row align-items-center py-4">
         <div class="col-lg-7">
-          <h6 class="h2 text-white d-inline-block mb-0">
-            {{ tutor.nombre }} {{ tutor.apellido }}
-          </h6>
-          <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
-            <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
-              <li class="breadcrumb-item"><a href="{% url 'home' %}" class="text-white"><i class="fas fa-home"></i></a></li>
-              <li class="breadcrumb-item"><a href="{% url 'ec-tutores' %}" class="text-white">Mis Tutores</a></li>
-              <li class="breadcrumb-item active">Detalle</li>
-            </ol>
-          </nav>
+          
+          
         </div>
         <div class="col-lg-5 text-right">
           {% if total > 0 and tutores_disponibles %}
@@ -150,7 +143,7 @@
               </th>
               <th>Alumno</th>
               <th>Carrera</th>
-              <th>Riesgo IA</th>
+              <th>Riesgo</th>
               <th class="text-right">Acciones</th>
             </tr>
           </thead>

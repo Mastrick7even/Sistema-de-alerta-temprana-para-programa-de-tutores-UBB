@@ -1,17 +1,13 @@
 {% extends 'layouts/base.html' %}
+{% block page_title %}Tablas Maestras{% endblock %}
 {% block content %}
 <div class="header bg-primary pb-6">
   <div class="container-fluid">
     <div class="header-body">
       <div class="row align-items-center py-4">
         <div class="col">
-          <h6 class="h2 text-white d-inline-block mb-0">Tablas Maestras</h6>
-          <nav aria-label="breadcrumb" class="d-none d-md-inline-block ml-md-4">
-            <ol class="breadcrumb breadcrumb-links breadcrumb-dark">
-              <li class="breadcrumb-item"><a href="{% url 'admin-panel' %}" class="text-white">Admin</a></li>
-              <li class="breadcrumb-item active">Tablas Maestras</li>
-            </ol>
-          </nav>
+          
+          
         </div>
       </div>
     </div>
@@ -55,7 +51,7 @@
         <div class="card-footer bg-white">
           <form method="POST" action="{% url 'admin-maestra-crear' 'tipo-alarma' %}" class="form-inline">
             {% csrf_token %}
-            {{ forma_alarma.nombre }}
+            {{ forma_tipo_alarma.nombre }}
             <button type="submit" class="btn btn-sm btn-primary ml-2">
               <i class="fas fa-plus"></i> Agregar
             </button>
@@ -107,6 +103,47 @@
       </div>
     </div>
 
+    <!-- Alarmas Específicas -->
+    <div class="col-lg-6 mb-4">
+      <div class="card h-100">
+        <div class="card-header bg-white border-0 d-flex align-items-center">
+          <div class="icon icon-shape bg-gradient-primary text-white rounded-circle mr-3" style="width:36px;height:36px;">
+            <i class="fas fa-exclamation-circle" style="font-size:.8rem;"></i>
+          </div>
+          <h3 class="mb-0">Alarmas Específicas</h3>
+          <span class="badge badge-primary ml-auto">{{ alarmas|length }}</span>
+        </div>
+        <div class="card-body p-0">
+          <ul class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">
+            {% for obj in alarmas %}
+            <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-2">
+              <span><strong>{{ obj.tipo_alarma.nombre }}</strong>: {{ obj.descripcion }}</span>
+              <div>
+                <button class="btn btn-xs btn-outline-danger"
+                  onclick="abrirEliminar('{% url "admin-maestra-editar" "alarma" obj.id_alarma %}', '{{ obj.descripcion|escapejs }}')">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </li>
+            {% empty %}
+            <li class="list-group-item text-muted text-center py-3">Sin registros</li>
+            {% endfor %}
+          </ul>
+        </div>
+        <div class="card-footer bg-white">
+          <form method="POST" action="{% url 'admin-maestra-crear' 'alarma' %}" class="form-inline">
+            {% csrf_token %}
+            {{ forma_alarma.tipo_alarma }}
+            <div class="mx-2"></div>
+            {{ forma_alarma.descripcion }}
+            <button type="submit" class="btn btn-sm btn-primary ml-2 mt-2 mt-lg-0">
+              <i class="fas fa-plus"></i> Agregar
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
     <!-- Clasificaciones de Tutoría -->
     <div class="col-lg-6 mb-4">
       <div class="card h-100">
@@ -142,92 +179,6 @@
           <form method="POST" action="{% url 'admin-maestra-crear' 'clasificacion' %}" class="form-inline">
             {% csrf_token %}
             {{ forma_clasificacion.nombre }}
-            <button type="submit" class="btn btn-sm btn-primary ml-2">
-              <i class="fas fa-plus"></i> Agregar
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <!-- Tipos de Deserción -->
-    <div class="col-lg-6 mb-4">
-      <div class="card h-100">
-        <div class="card-header bg-white border-0 d-flex align-items-center">
-          <div class="icon icon-shape bg-gradient-warning text-white rounded-circle mr-3" style="width:36px;height:36px;">
-            <i class="fas fa-door-open" style="font-size:.8rem;"></i>
-          </div>
-          <h3 class="mb-0">Tipos de Deserción</h3>
-          <span class="badge badge-warning ml-auto">{{ tipos_desercion|length }}</span>
-        </div>
-        <div class="card-body p-0">
-          <ul class="list-group list-group-flush">
-            {% for obj in tipos_desercion %}
-            <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-2">
-              <span>{{ obj.causa }}</span>
-              <div>
-                <button class="btn btn-xs btn-neutral"
-                  onclick="abrirEditar('tipo-desercion', {{ obj.id_tipo_desercion }}, '{{ obj.causa|escapejs }}')">
-                  <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn btn-xs btn-outline-danger"
-                  onclick="abrirEliminar('{% url "admin-maestra-editar" "tipo-desercion" obj.id_tipo_desercion %}', '{{ obj.causa|escapejs }}')">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </div>
-            </li>
-            {% empty %}
-            <li class="list-group-item text-muted text-center py-3">Sin registros</li>
-            {% endfor %}
-          </ul>
-        </div>
-        <div class="card-footer bg-white">
-          <form method="POST" action="{% url 'admin-maestra-crear' 'tipo-desercion' %}" class="form-inline">
-            {% csrf_token %}
-            {{ forma_desercion.causa }}
-            <button type="submit" class="btn btn-sm btn-primary ml-2">
-              <i class="fas fa-plus"></i> Agregar
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-
-    <!-- Estados de Estudiante -->
-    <div class="col-lg-6 mb-4">
-      <div class="card h-100">
-        <div class="card-header bg-white border-0 d-flex align-items-center">
-          <div class="icon icon-shape bg-gradient-primary text-white rounded-circle mr-3" style="width:36px;height:36px;">
-            <i class="fas fa-flag" style="font-size:.8rem;"></i>
-          </div>
-          <h3 class="mb-0">Estados de Estudiante</h3>
-          <span class="badge badge-primary ml-auto">{{ estados|length }}</span>
-        </div>
-        <div class="card-body p-0">
-          <ul class="list-group list-group-flush">
-            {% for obj in estados %}
-            <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-2">
-              <span>{{ obj.nombre }}</span>
-              <div>
-                <button class="btn btn-xs btn-neutral"
-                  onclick="abrirEditar('estado', {{ obj.id_estado }}, '{{ obj.nombre|escapejs }}')">
-                  <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn btn-xs btn-outline-danger"
-                  onclick="abrirEliminar('{% url "admin-maestra-editar" "estado" obj.id_estado %}', '{{ obj.nombre|escapejs }}')">
-                  <i class="fas fa-trash"></i>
-                </button>
-              </div>
-            </li>
-            {% empty %}
-            <li class="list-group-item text-muted text-center py-3">Sin registros</li>
-            {% endfor %}
-          </ul>
-        </div>
-        <div class="card-footer bg-white">
-          <form method="POST" action="{% url 'admin-maestra-crear' 'estado' %}" class="form-inline">
-            {% csrf_token %}
-            {{ forma_estado.nombre }}
             <button type="submit" class="btn btn-sm btn-primary ml-2">
               <i class="fas fa-plus"></i> Agregar
             </button>
@@ -309,8 +260,6 @@ function abrirEditar(modelo, pk, valorActual) {
     'tipo-alarma':    `/admin-sat/maestras/tipo-alarma/${pk}/`,
     'tipo-tutoria':   `/admin-sat/maestras/tipo-tutoria/${pk}/`,
     'clasificacion':  `/admin-sat/maestras/clasificacion/${pk}/`,
-    'tipo-desercion': `/admin-sat/maestras/tipo-desercion/${pk}/`,
-    'estado':         `/admin-sat/maestras/estado/${pk}/`,
   };
   document.getElementById('form-editar').action = urls[modelo];
   document.getElementById('input-editar').value = valorActual;

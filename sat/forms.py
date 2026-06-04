@@ -2,7 +2,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from .models import (
     Bitacora, ComentarioBitacora, Tutoria, Asistencia, Usuario, Carrera, Rol,
-    TipoAlarma, TipoTutoria, ClasificacionTutoria, TipoDesercion, Estado
+    TipoAlarma, TipoTutoria, ClasificacionTutoria, TipoDesercion, Estado, Alarma
 )
 
 
@@ -23,7 +23,7 @@ class UsuarioAdminForm(forms.Form):
     email     = forms.EmailField(widget=forms.EmailInput(attrs={'class': W}))
     username  = forms.CharField(max_length=150, widget=forms.TextInput(attrs={'class': W}))
     rol       = forms.ModelChoiceField(
-        queryset=Rol.objects.all(),
+        queryset=Rol.objects.exclude(nombre__iexact='Estudiante'),
         widget=forms.Select(attrs={'class': W}),
         empty_label='-- Seleccione un rol --'
     )
@@ -102,11 +102,14 @@ class TipoDesercionForm(forms.ModelForm):
         widgets = {'causa': forms.TextInput(attrs={'class': W, 'placeholder': 'Causa de deserción'})}
 
 
-class EstadoForm(forms.ModelForm):
+class AlarmaForm(forms.ModelForm):
     class Meta:
-        model = Estado
-        fields = ['nombre']
-        widgets = {'nombre': forms.TextInput(attrs={'class': W, 'placeholder': 'Nombre del estado'})}
+        model = Alarma
+        fields = ['tipo_alarma', 'descripcion']
+        widgets = {
+            'tipo_alarma': forms.Select(attrs={'class': W}),
+            'descripcion': forms.TextInput(attrs={'class': W, 'placeholder': 'Descripción de la alarma específica'})
+        }
 
 
 

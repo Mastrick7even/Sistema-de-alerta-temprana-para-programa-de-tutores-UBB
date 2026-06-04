@@ -9,30 +9,27 @@ Perfil de {{ estudiante.nombre }}
 
 <style>
     .header-perfil {
-        min-height: 300px;
+        min-height: 200px;
         background-image: url('{% static "assets/img/theme/profile-cover.jpg" %}');
         background-size: cover;
         background-position: center top;
     }
 </style>
 
-<div class="header pb-6 d-flex align-items-center" class="header-perfil">
+<div class="header pb-8 pt-4 d-flex align-items-center header-perfil">
     <span class="mask bg-gradient-default opacity-8"></span>
 
     <div class="container-fluid d-flex align-items-center">
         <div class="row w-100">
-            <div class="col-lg-6 col-7">
-                <h1 class="display-2 text-white mt-4">{{ estudiante.nombre }} {{ estudiante.apellido }}</h1>
-                <p class="text-white mt-0 mb-4">Este es el perfil detallado del estudiante. Aquí puedes revisar su
-                    historial académico, sus alertas y registrar nuevas observaciones en la bitácora.</p>
-            </div>
-            <div class="col-lg-6 col-5 text-right">
-                <a href="{% url 'estudiante-list' %}" class="btn btn-neutral mb-3 mr-2">
-                    <i class="fas fa-arrow-left"></i> Volver
-                </a>
-                <a href="{% url 'estudiante-pdf' object.pk %}" target="_blank" class="btn btn-neutral text-danger mb-3">
-                    <i class="fas fa-file-pdf"></i> Descargar Ficha
-                </a>
+            <div class="col-lg-8 col-md-10">
+                <div>
+                    <a href="{% url 'estudiante-list' %}" class="btn btn-neutral mr-3">
+                        <i class="fas fa-arrow-left"></i> Volver al Listado
+                    </a>
+                    <a href="{% url 'estudiante-pdf' object.pk %}" target="_blank" class="btn btn-neutral text-danger">
+                        <i class="fas fa-file-pdf"></i> Descargar Ficha
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -144,7 +141,7 @@ Perfil de {{ estudiante.nombre }}
                               <form method="post" action="{% url 'sobrescribir-riesgo' estudiante.pk %}">
                                   {% csrf_token %}
                                   <div class="modal-body py-4 text-dark">
-                                    <p class="mb-3">La predicción será rechazada. Por favor, selecciona el nivel de riesgo correcto y añade una justificación.</p>
+                                    <p class="mb-3">El riesgo calculado será rechazado. Por favor, selecciona el nivel de riesgo correcto y añade una justificación.</p>
                                     <div class="form-group mb-2">
                                         <label class="form-control-label">Nivel de riesgo correcto</label>
                                         <select name="riesgo_manual" class="form-control form-control-sm" required>

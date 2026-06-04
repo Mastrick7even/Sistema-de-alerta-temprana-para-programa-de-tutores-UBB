@@ -1,4 +1,5 @@
 {% extends 'layouts/base.html' %}
+{% block page_title %}Pasar Lista{% endblock %}
 {% load sat_extras %}
 
 {% block content %}
@@ -7,7 +8,7 @@
         <div class="header-body">
             <div class="row align-items-center py-4">
                 <div class="col-lg-6 col-7">
-                    <h6 class="h2 text-white d-inline-block mb-0">Pasar Lista</h6>
+                    
                     <p class="text-white mb-0">Tutoría: {{ tutoria.tema_tutoria }} ({{ tutoria.fecha|date:"d/m/Y H:i"}})</p>
                 </div>
             </div>
@@ -40,7 +41,7 @@
                                     <td>{{ est.nombre }} {{ est.apellido }}</td>
                                     <td>{{ est.rut }}</td>
                                     <td>
-                                        {% with estado_actual=mapa_asistencia|get_item:est.id_estudiante %}
+                                        {% with estado_actual=mapa_asistencia|get_item:est.id_estudiante|default:"Ausente" %}
 
                                         <div class="btn-group btn-group-toggle" data-toggle="buttons">
                                             <label

@@ -304,6 +304,9 @@ class TipoAlarma(models.Model):
         verbose_name = 'Tipo de alarma'
         verbose_name_plural = 'Tipos de alarma'
 
+    def __str__(self):
+        return self.nombre
+
 
 class TipoDesercion(models.Model):
     id_tipo_desercion = models.AutoField(primary_key=True)
@@ -313,6 +316,9 @@ class TipoDesercion(models.Model):
         db_table = 'tipo_desercion'
         verbose_name = 'Tipo de deserción'
         verbose_name_plural = 'Tipos de deserción'
+
+    def __str__(self):
+        return self.causa
 
 
 class TipoTutoria(models.Model):

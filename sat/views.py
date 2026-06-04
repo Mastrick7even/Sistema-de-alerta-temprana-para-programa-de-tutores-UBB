@@ -16,13 +16,13 @@ from django.views.generic import ListView, DetailView, CreateView, UpdateView, D
 from .models import (
     Estudiante, Usuario, Bitacora, Estado, Carrera, TipoAlarma, Tutoria,
     Asistencia, Notificacion, HistorialRiesgo, Rol, TipoTutoria,
-    ClasificacionTutoria, TipoDesercion
+    ClasificacionTutoria, TipoDesercion, Alarma
 )
 from .forms import (
     BitacoraForm, TutoriaForm,
     UsuarioAdminForm, CarreraAdminForm,
     TipoAlarmaForm, TipoTutoriaForm, ClasificacionTutoriaForm,
-    TipoDesercionForm, EstadoForm
+    TipoDesercionForm, AlarmaForm
 )
 
 class EstudianteListView(LoginRequiredMixin, ListView):
@@ -37,18 +37,25 @@ class EstudianteListView(LoginRequiredMixin, ListView):
         queryset = super().get_queryset()
         user = self.request.user
         
-        try:
-            perfil = Usuario.objects.get(email=user.email)
-            if perfil.rol.nombre == 'Tutor':
-                # El Tutor solo ve sus asignados
-                queryset = queryset.filter(tutor_asignado=perfil)
-            elif perfil.rol.nombre == 'Encargado de Carrera':
-                # El EC solo ve estudiantes de sus carreras asignadas
-                carreras_ec = Carrera.objects.filter(encargado=perfil)
-                queryset = queryset.filter(carrera__in=carreras_ec)
-        except Usuario.DoesNotExist:
-            if not user.is_superuser:
+        if user.is_superuser:
+            # Los superusuarios ven todo, ignoramos las restricciones de su perfil
+            pass
+        else:
+            try:
+                perfil = Usuario.objects.get(email=user.email)
+                if perfil.rol.nombre == 'Tutor':
+                    # El Tutor solo ve sus asignados
+                    queryset = queryset.filter(tutor_asignado=perfil)
+                elif perfil.rol.nombre == 'Encargado de Carrera':
+                    # El EC solo ve estudiantes de sus carreras asignadas
+                    carreras_ec = Carrera.objects.filter(encargado=perfil)
+                    queryset = queryset.filter(carrera__in=carreras_ec)
+                elif perfil.rol.nombre == 'Administrador':
+                    # El Administrador ve todos los estudiantes sin restricciones
+                    pass
+            except Usuario.DoesNotExist:
                 return Estudiante.objects.none()
+
 
         # 2. FILTROS INTELIGENTES (Conectados a la IA)
         
@@ -726,6 +733,8 @@ class ReporteAsistenciaView(LoginRequiredMixin, ListView):
                 elif perfil.rol.nombre == 'Encargado de Carrera':
                     carreras_ec = Carrera.objects.filter(encargado=perfil)
                     queryset = queryset.filter(carrera__in=carreras_ec)
+                elif perfil.rol.nombre == 'Administrador':
+                    pass
             except Usuario.DoesNotExist:
                 return Estudiante.objects.none()
 
@@ -1194,7 +1203,7 @@ def confirmar_prediccion_ia(request, pk):
     try:
         perfil = Usuario.objects.get(email=request.user.email)
         if perfil.rol.nombre != 'Encargado de Carrera' and not request.user.is_superuser:
-            messages.error(request, '⛔ Solo los Encargados de Carrera pueden confirmar predicciones.')
+            messages.error(request, '⛔ Solo los Encargados de Carrera pueden confirmar los calculos de riesgo.')
             return redirect('estudiante-detail', pk=pk)
     except Usuario.DoesNotExist:
         if not request.user.is_superuser:
@@ -1207,7 +1216,7 @@ def confirmar_prediccion_ia(request, pk):
         estudiante.save(update_fields=['riesgo_pendiente_validacion'])
         messages.success(
             request,
-            f'✅ Predicción confirmada: {estudiante.nombre} {estudiante.apellido} → Nivel {nivel_nombre}.'
+            f'✅ Riesgo confirmado: {estudiante.nombre} {estudiante.apellido} → Nivel {nivel_nombre}.'
         )
 
     return redirect('estudiante-detail', pk=pk)
@@ -1226,7 +1235,7 @@ def rechazar_prediccion_ia(request, pk):
     try:
         perfil = Usuario.objects.get(email=request.user.email)
         if perfil.rol.nombre != 'Encargado de Carrera' and not request.user.is_superuser:
-            messages.error(request, '⛔ Solo los Encargados de Carrera pueden rechazar predicciones.')
+            messages.error(request, '⛔ Solo los Encargados de Carrera pueden rechazar los calculos de riesgo.')
             return redirect('estudiante-detail', pk=pk)
     except Usuario.DoesNotExist:
         if not request.user.is_superuser:
@@ -1235,7 +1244,7 @@ def rechazar_prediccion_ia(request, pk):
 
     if request.method == 'POST':
         if not estudiante.riesgo_pendiente_validacion:
-            messages.warning(request, '⚠️ No hay predicción pendiente que rechazar.')
+            messages.warning(request, '⚠️ No hay riesgo pendiente que rechazar.')
             return redirect('estudiante-detail', pk=pk)
 
         # Buscar el último cambio hecho por la IA (el que estamos rechazando)
@@ -1250,7 +1259,7 @@ def rechazar_prediccion_ia(request, pk):
         estudiante.nivel_riesgo_manual = riesgo_anterior
         estudiante.riesgo_sobrescrito = True
         estudiante.riesgo_pendiente_validacion = False
-        estudiante.observacion_sobrescritura = "Predicción rechazada por EC. Se restauró el nivel previo."
+        estudiante.observacion_sobrescritura = "Riesgo rechazado por EC. Se restauró el nivel previo."
         estudiante.riesgo_corregido_por = perfil if perfil else None
         estudiante.riesgo_corregido_fecha = timezone.now()
         
@@ -1264,7 +1273,7 @@ def rechazar_prediccion_ia(request, pk):
         nivel_estaba = {-1: 'Sin Contacto', 0: 'Sin Riesgo', 1: 'Bajo', 2: 'Medio', 3: 'Alto'}.get(riesgo_anterior, '?')
         messages.success(
             request,
-            f'🙅 Predicción rechazada para {estudiante.nombre}. Riesgo restaurado a: Nivel {nivel_estaba}.'
+            f'🙅 Riesgo rechazado para {estudiante.nombre}. Riesgo restaurado a: Nivel {nivel_estaba}.'
         )
 
     return redirect('estudiante-detail', pk=pk)
@@ -1546,13 +1555,11 @@ def admin_maestras(request):
         'tipos_alarma': TipoAlarma.objects.all().order_by('nombre'),
         'tipos_tutoria': TipoTutoria.objects.all().order_by('nombre'),
         'clasificaciones': ClasificacionTutoria.objects.all().order_by('nombre'),
-        'tipos_desercion': TipoDesercion.objects.all().order_by('causa'),
-        'estados': Estado.objects.all().order_by('nombre'),
-        'forma_alarma': TipoAlarmaForm(),
+        'alarmas': Alarma.objects.select_related('tipo_alarma').all().order_by('tipo_alarma__nombre', 'descripcion'),
+        'forma_tipo_alarma': TipoAlarmaForm(),
         'forma_tutoria': TipoTutoriaForm(),
         'forma_clasificacion': ClasificacionTutoriaForm(),
-        'forma_desercion': TipoDesercionForm(),
-        'forma_estado': EstadoForm(),
+        'forma_alarma': AlarmaForm(),
     }
     return render(request, 'sat/admin/admin_maestras.html', context)
 
@@ -1562,14 +1569,13 @@ def admin_maestras(request):
 def admin_maestra_accion(request, modelo, pk=None):
     """
     Vista unificada para crear/editar/eliminar cualquier tabla maestra.
-    modelo: 'tipo-alarma' | 'tipo-tutoria' | 'clasificacion' | 'tipo-desercion' | 'estado'
+    modelo: 'tipo-alarma' | 'tipo-tutoria' | 'clasificacion' | 'tipo-desercion' | 'alarma'
     """
     MODEL_MAP = {
         'tipo-alarma':    (TipoAlarma,          TipoAlarmaForm,          'id_tipo',          'nombre'),
         'tipo-tutoria':   (TipoTutoria,         TipoTutoriaForm,         'id_tipo',          'nombre'),
         'clasificacion':  (ClasificacionTutoria, ClasificacionTutoriaForm,'id_clasificacion', 'nombre'),
-        'tipo-desercion': (TipoDesercion,        TipoDesercionForm,       'id_tipo_desercion','causa'),
-        'estado':         (Estado,               EstadoForm,              'id_estado',        'nombre'),
+        'alarma':         (Alarma,               AlarmaForm,              'id_alarma',        'descripcion'),
     }
     if modelo not in MODEL_MAP:
         messages.error(request, 'Modelo no reconocido.')

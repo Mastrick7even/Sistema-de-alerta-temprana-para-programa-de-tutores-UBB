@@ -129,55 +129,58 @@
       <!-- Formulario de Subida -->
       <div class="card">
         <div class="card-header border-0 bg-transparent">
-          <h3 class="mb-0">Importador de Estudiantes</h3>
+          <h3 class="mb-0">Importación de Estudiantes en 2 Pasos</h3>
         </div>
         <div class="card-body">
           <p class="text-sm text-muted">
-            Sube un archivo `.csv` o `.xlsx` (Excel). Si un RUT ya existe, sus datos se actualizarán. Si no existe, se creará el estudiante asignándole riesgo 0 ("Sano").
+            Sube un archivo Excel. Si un RUT ya existe, sus datos se actualizarán. Si no existe, se creará el estudiante asignándole nivel "Sin riesgo".
           </p>
           
-          <div class="alert alert-default border-0 shadow-sm mt-3" role="alert">
-            <div class="d-flex align-items-center mb-3">
-                <i class="fas fa-exclamation-triangle text-warning fa-2x mr-3"></i>
-                <div>
-                    <h4 class="text-white mb-1">Estructura Estricta Requerida</h4>
-                    <p class="text-white text-sm mb-0">
-                        La primera fila de tu Excel debe contener <strong>exactamente</strong> estos encabezados. Además, los RUTs deben escribirse siempre <strong>sin puntos y con guión</strong> <code>(Ej: 19123456-9)</code>.
-                    </p>
-                </div>
-            </div>
-            
-            <div class="table-responsive bg-white rounded">
-                <table class="table align-items-center table-flush table-sm mb-0">
-                    <thead class="thead-light">
-                        <tr>
-                            <th scope="col" class="text-dark font-weight-bold">RUT</th>
-                            <th scope="col" class="text-dark font-weight-bold">Nombres</th>
-                            <th scope="col" class="text-dark font-weight-bold">Apellidos</th>
-                            <th scope="col" class="text-dark font-weight-bold">Email</th>
-                            <th scope="col" class="text-dark font-weight-bold">Año Ingreso</th>
-                            <th scope="col" class="text-dark font-weight-bold">ID Carrera</th>
-                        </tr>
-                    </thead>
-                </table>
+          <h5 class="text-uppercase text-primary text-xs font-weight-bolder mb-3 mt-4">Paso 1: Descarga la Plantilla Oficial</h5>
+          <div class="card bg-white border border-primary shadow-sm mb-4">
+            <div class="card-body p-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between">
+              <div class="mb-4 mb-md-0 pr-md-4">
+                  <div class="d-flex align-items-center mb-2">
+                      <div class="icon icon-shape bg-primary text-white rounded-circle shadow-sm mr-3" style="width: 2.5rem; height: 2.5rem;">
+                          <i class="fas fa-info"></i>
+                      </div>
+                      <h4 class="text-primary mb-0 font-weight-bolder">Estructura Estricta Requerida</h4>
+                  </div>
+                  <p class="text-dark text-sm mb-0 ml-md-5 pl-md-1 mt-2">
+                      Rellena los datos <strong>sin modificar ni eliminar las cabeceras</strong> de la plantilla.<br>
+                      Recuerda: Los RUTs deben escribirse siempre <strong>sin puntos y con guión</strong> <span class="badge badge-light text-primary border shadow-sm ml-1">Ej: 19123456-9</span>.
+                  </p>
+              </div>
+              <div class="text-center ml-md-auto mt-2 mt-md-0">
+                  <a href="{% static 'assets/files/plantilla_carga_masiva.xlsx' %}" class="btn btn-success btn-lg shadow-sm" download>
+                      <span class="btn-inner--icon"><i class="fas fa-file-excel mr-2 fa-lg"></i></span>
+                      <span class="btn-inner--text font-weight-bold">Descargar Plantilla</span>
+                  </a>
+              </div>
             </div>
           </div>
 
-          <form method="POST" enctype="multipart/form-data" class="mt-4">
+          <h5 class="text-uppercase text-primary text-xs font-weight-bolder mb-3">Paso 2: Sube tu Archivo</h5>
+
+          <form method="POST" enctype="multipart/form-data" class="mt-2">
             {% csrf_token %}
-            <div class="row align-items-end">
-                <div class="col-md-9">
+            <div class="row align-items-center p-4 border border-light rounded bg-secondary shadow-sm">
+                <div class="col-md-8">
                     <div class="form-group mb-0">
-                        <label for="{{ form.archivo.id_for_label }}" class="form-control-label">Archivo de alumnos (.csv, .xlsx)</label>
-                        {{ form.archivo }}
+                        <label for="{{ form.archivo.id_for_label }}" class="form-control-label text-dark mb-2">
+                            <i class="fas fa-file-upload mr-2 text-primary"></i>Selecciona el archivo de alumnos (.xlsx)
+                        </label>
+                        <div class="p-2 bg-white rounded shadow-sm border">
+                            {{ form.archivo }}
+                        </div>
                         {% if form.archivo.errors %}
-                            <small class="text-danger d-block mt-2">{{ form.archivo.errors.0 }}</small>
+                            <small class="text-danger d-block mt-2"><i class="fas fa-exclamation-circle mr-1"></i>{{ form.archivo.errors.0 }}</small>
                         {% endif %}
                     </div>
                 </div>
-                <div class="col-md-3">
-                     <button type="submit" class="btn btn-primary btn-block">
-                        <i class="fas fa-upload mr-2"></i> Iniciar carga
+                <div class="col-md-4 mt-3 mt-md-0 text-right">
+                     <button type="submit" class="btn btn-primary btn-lg btn-block shadow hover-translate-y-n3">
+                        <i class="fas fa-cloud-upload-alt mr-2"></i> Iniciar carga
                     </button>
                 </div>
             </div>
@@ -191,29 +194,17 @@
     <div class="col-xl-4">
       <div class="card bg-gradient-default">
         <div class="card-header bg-transparent border-0 pb-0">
-            <h3 class="text-white mb-0"><i class="fas fa-info-circle mr-2"></i>Formato Requerido</h3>
+            <h3 class="text-white mb-0"><i class="fas fa-list-ol mr-2"></i>Códigos de Carreras</h3>
         </div>
         <div class="card-body text-white">
-          <p class="text-sm mb-4">El archivo debe contener las siguientes columnas (el título debe coincidir):</p>
+          <p class="text-sm mb-4">Necesitarás estos IDs numéricos para llenar la columna <strong>ID Carrera</strong> en tu archivo Excel.</p>
           
-          <ul class="list-styled text-sm opacity-8">
-            <li><strong>RUT</strong> (Ej. 19123456-9)</li>
-            <li><strong>Nombres</strong> (Ej. Juan Pedro)</li>
-            <li><strong>Apellidos</strong> (Ej. Pérez Díaz)</li>
-            <li><strong>Email</strong> (Ej. jperez@alumnos.ubiobio.cl)</li>
-            <li><strong>Año Ingreso</strong> (Ej. 2025)</li>
-            <li><strong>ID Carrera</strong> (Código numérico)</li>
-          </ul>
-
-          <hr class="border-light opacity-3 my-3">
-          
-          <h5 class="text-white mb-2">IDs de Carreras Disponibles:</h5>
-          <div style="max-height: 150px; overflow-y: auto;" class="pr-2">
-            <ul class="list-group list-group-flush rounded text-dark">
+          <div style="max-height: 350px; overflow-y: auto;" class="pr-2">
+            <ul class="list-group list-group-flush rounded text-dark shadow-sm">
                 {% for c in carreras %}
-                <li class="list-group-item d-flex justify-content-between align-items-center px-3 py-2 text-sm">
+                <li class="list-group-item d-flex justify-content-between align-items-center px-3 py-2 text-sm font-weight-bold">
                     {{ c.nombre }}
-                    <span class="badge badge-primary badge-pill">{{ c.pk }}</span>
+                    <span class="badge badge-primary badge-pill shadow-sm">{{ c.pk }}</span>
                 </li>
                 {% empty %}
                 <li class="list-group-item px-3 py-2 text-sm text-muted">No hay carreras registradas.</li>

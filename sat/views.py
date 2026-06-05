@@ -142,12 +142,32 @@ class EstudianteDetailView(LoginRequiredMixin, DetailView):
             return Estudiante.objects.none()
 
     def get_context_data(self, **kwargs):
+        from django.utils import timezone
+        
         context = super().get_context_data(**kwargs) 
         estudiante_actual = self.object
         context['bitacoras'] = estudiante_actual.bitacora_set.all().order_by('-fecha_registro')
-        context['historial_riesgo'] = HistorialRiesgo.objects.filter(
+        
+        # Obtener historial ordenado del más reciente al más antiguo
+        historial_qs = HistorialRiesgo.objects.filter(
             estudiante=estudiante_actual
         ).order_by('-fecha_cambio')[:10]
+        
+        historial_riesgo_list = list(historial_qs)
+        ahora = timezone.now()
+        
+        # Calcular los días en cada estado
+        for i, h in enumerate(historial_riesgo_list):
+            if i == 0:
+                # El estado más reciente dura desde su fecha_cambio hasta AHORA
+                delta = ahora - h.fecha_cambio
+            else:
+                # Un estado anterior duró desde su fecha_cambio hasta la fecha_cambio del estado siguiente (i-1)
+                delta = historial_riesgo_list[i-1].fecha_cambio - h.fecha_cambio
+            
+            h.dias_en_estado = delta.days
+
+        context['historial_riesgo'] = historial_riesgo_list
         context['ultimo_historial_ml'] = HistorialRiesgo.objects.filter(
             estudiante=estudiante_actual, origen_cambio='ML'
         ).order_by('-fecha_cambio').first()

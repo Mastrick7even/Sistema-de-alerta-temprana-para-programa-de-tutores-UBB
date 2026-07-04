@@ -26,9 +26,11 @@ Perfil de {{ estudiante.nombre }}
                     <a href="{% url 'estudiante-list' %}" class="btn btn-neutral mr-3">
                         <i class="fas fa-arrow-left"></i> Volver al Listado
                     </a>
+                    {% if es_encargado or user.is_superuser %}
                     <a href="{% url 'estudiante-pdf' object.pk %}" target="_blank" class="btn btn-neutral text-danger">
                         <i class="fas fa-file-pdf"></i> Descargar Ficha
                     </a>
+                    {% endif %}
                 </div>
             </div>
         </div>

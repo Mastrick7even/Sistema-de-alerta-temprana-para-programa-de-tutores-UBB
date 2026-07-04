@@ -499,6 +499,16 @@ class ReporteEstudiantePDF(LoginRequiredMixin, DetailView):
     model = Estudiante
     
     def get(self, request, *args, **kwargs):
+        try:
+            perfil = Usuario.objects.get(email=request.user.email)
+            if perfil.rol.nombre != 'Encargado de Carrera' and not request.user.is_superuser:
+                messages.error(request, '⛔ Solo los Encargados de Carrera pueden descargar la ficha técnica.')
+                return redirect('estudiante-list')
+        except Usuario.DoesNotExist:
+            if not request.user.is_superuser:
+                messages.error(request, '⛔ No tienes permisos para descargar la ficha técnica.')
+                return redirect('estudiante-list')
+
         estudiante = self.get_object()
         
         # Obtenemos las bitácoras ordenadas
@@ -2137,6 +2147,22 @@ class CargaMasivaView(SuperuserRequiredMixin, LoginRequiredMixin, TemplateView):
         return self.render_to_response(context)
 
 from django.contrib.auth.decorators import user_passes_test
+from django.conf import settings
+
+@user_passes_test(lambda u: u.is_superuser)
+def descargar_plantilla_carga_masiva(request):
+    file_path = os.path.join(settings.BASE_DIR, 'apps', 'static', 'assets', 'files', 'plantilla_carga_masiva.xlsx')
+    if os.path.exists(file_path):
+        with open(file_path, 'rb') as fh:
+            response = HttpResponse(
+                fh.read(),
+                content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            response['Content-Disposition'] = 'attachment; filename="plantilla_carga_masiva.xlsx"'
+            return response
+    else:
+        messages.error(request, "❌ El archivo de plantilla no se encuentra en el servidor. Verifica los archivos subidos al repositorio.")
+        return redirect('admin-carga-masiva')
 
 @user_passes_test(lambda u: u.is_superuser)
 def descargar_errores_carga_masiva(request):

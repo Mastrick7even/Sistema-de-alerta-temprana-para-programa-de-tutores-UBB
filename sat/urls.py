@@ -13,7 +13,7 @@ from .views import (
     # Bloque 3: Gestión Tutores EC
     EcTutoresView, EcTutorDetalleView, ec_reasignar_estudiante, ec_reasignar_todo, ec_asignar_alumnos, ec_acciones_masivas_tutorados,
     # Bloque 4: Carga Masiva
-    CargaMasivaView, descargar_errores_carga_masiva
+    CargaMasivaView, descargar_errores_carga_masiva, descargar_plantilla_carga_masiva
 )
 
 urlpatterns = [
@@ -61,6 +61,7 @@ urlpatterns = [
     path('admin-sat/maestras/<str:modelo>/', admin_maestra_accion, name='admin-maestra-crear'),
     path('admin-sat/maestras/<str:modelo>/<int:pk>/', admin_maestra_accion, name='admin-maestra-editar'),
     path('admin-sat/carga-masiva/', CargaMasivaView.as_view(), name='admin-carga-masiva'),
+    path('admin-sat/carga-masiva/descargar-plantilla/', descargar_plantilla_carga_masiva, name='admin-descargar-plantilla'),
     path('admin-sat/carga-masiva/descargar-errores/', descargar_errores_carga_masiva, name='admin-descargar-errores'),
 
     # ── Bloque 3: Gestión Tutores para EC ──────────────────────────

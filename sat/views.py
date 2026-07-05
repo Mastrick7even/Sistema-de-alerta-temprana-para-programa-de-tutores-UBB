@@ -2151,7 +2151,11 @@ from django.conf import settings
 
 @user_passes_test(lambda u: u.is_superuser)
 def descargar_plantilla_carga_masiva(request):
-    file_path = os.path.join(settings.BASE_DIR, 'apps', 'static', 'assets', 'files', 'plantilla_carga_masiva.xlsx')
+    base_dir = getattr(settings, 'CORE_DIR', settings.BASE_DIR)
+    file_path = os.path.join(base_dir, 'apps', 'static', 'assets', 'files', 'plantilla_carga_masiva.xlsx')
+    if not os.path.exists(file_path):
+        file_path = os.path.join(base_dir, 'staticfiles', 'assets', 'files', 'plantilla_carga_masiva.xlsx')
+        
     if os.path.exists(file_path):
         with open(file_path, 'rb') as fh:
             response = HttpResponse(
@@ -2161,7 +2165,7 @@ def descargar_plantilla_carga_masiva(request):
             response['Content-Disposition'] = 'attachment; filename="plantilla_carga_masiva.xlsx"'
             return response
     else:
-        messages.error(request, "❌ El archivo de plantilla no se encuentra en el servidor. Verifica los archivos subidos al repositorio.")
+        messages.error(request, f"❌ El archivo de plantilla no se encuentra en el servidor (buscado en: {file_path}).")
         return redirect('admin-carga-masiva')
 
 @user_passes_test(lambda u: u.is_superuser)
